@@ -1,0 +1,72 @@
+/*
+ * Design tokens — single source of truth (AD-13).
+ * The ONLY file allowed to contain raw hex colors and font-family literals
+ * (index.html theme-color/OG metas are the sole exceptions).
+ */
+
+@font-face {
+  font-family: 'Afrah';
+  src: url('/fonts/afrah-regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Afrah';
+  src: url('/fonts/afrah-bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Arapey';
+  src: url('/fonts/arapey-regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Arapey';
+  src: url('/fonts/arapey-italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Benedict';
+  src: url('/fonts/benedict-regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Palette */
+  --olive: #50590d;
+  --deep-olive: #464605;
+  --terracotta: #7f3717;
+  --gold-sand: #d2be81;
+  --cream: #efe8d8; /* base surface */
+  --dark-gray: #3e3e3e;
+  --ink: #1a1818;
+
+  /*
+   * Derived tints — mixed exclusively from the seven brand colors above.
+   * Frame material for the "garden rooms" world: hairlines, panel fills,
+   * hover shades. Never introduce a new base hex here.
+   */
+  --veil: color-mix(in oklab, var(--cream) 88%, var(--gold-sand)); /* framed-room fill */
+  --sand-line: color-mix(in oklab, var(--gold-sand) 62%, var(--cream)); /* soft gold hairline */
+  --olive-line: color-mix(in oklab, var(--olive) 32%, var(--cream)); /* engraved outer hairline */
+  --terracotta-deep: color-mix(in oklab, var(--terracotta) 82%, var(--ink)); /* action hover */
+  --cream-soft: color-mix(in oklab, var(--cream) 82%, var(--gold-sand)); /* muted cream on deep-olive */
+
+  /* Font stacks */
+  --font-display: 'Afrah', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-body: 'Arapey', Georgia, 'Times New Roman', serif;
+  --font-accent: 'Benedict', 'Segoe Script', 'Brush Script MT', cursive, serif;
+}

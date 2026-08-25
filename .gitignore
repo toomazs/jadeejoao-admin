@@ -1,0 +1,24 @@
+node_modules
+dist
+coverage
+*.local
+
+.env
+.env.*
+!.env.example
+
+# impeccable per-developer state (PRODUCT.md, DESIGN.md and .impeccable/surfaces are committed)
+.impeccable/config.local.json
+.impeccable/hook.cache.json
+.impeccable/live/
+
+# Wrangler local state
+.wrangler/
+
+# Ferramenta de design local, fora do repositorio
+.impeccable/
+PRODUCT.md
+
+# Ferramenta de design local, fora do repositorio
+.impeccable/
+PRODUCT.md

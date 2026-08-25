@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "jadeejoao-admin",
+  "compatibility_date": "2026-08-25",
+
+  // Assets-only Worker: the panel is a static bundle that talks to the API.
+  "assets": {
+    "directory": "./dist",
+    // Workers does not guess that this is a single-page app. Without this,
+    // opening /convidados directly would 404 instead of reaching the router.
+    "not_found_handling": "single-page-application"
+  }
+}

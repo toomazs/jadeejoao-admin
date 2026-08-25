@@ -1,0 +1,123 @@
+import { Monitor, RefreshCw, Smartphone } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+
+/**
+ * The real site, showing edits that have not been saved.
+ *
+ * Not a mockup and not a rebuild: this is `jadeejoao.com.br` in an iframe,
+ * running the same bundle guests get. It boots in preview mode, where its API
+ * transport answers `/content` and `/gifts` from whatever draft we post here
+ * and passes everything else through to the real API.
+ *
+ * The alternative — save, switch tabs, refresh, hope — means finding out that
+ * a long title broke the layout only after the guests could see it.
+ */
+
+/** Where the published site lives. Overridable for local development. */
+const SITE_URL = import.meta.env.VITE_SITE_URL ?? 'https://jadeejoao.com.br'
+
+const DEVICES = {
+  desktop: { label: 'Computador', width: '100%', icon: Monitor },
+  phone: { label: 'Celular', width: '390px', icon: Smartphone },
+} as const
+
+type Device = keyof typeof DEVICES
+
+export interface Draft {
+  /** The public `/content` shape — sections already filtered by `enabled`. */
+  content?: unknown
+  /** The public `/gifts` shape. */
+  gifts?: unknown
+}
+
+interface SitePreviewProps {
+  draft: Draft
+  /** Section to scroll to, so editing a section shows that section. */
+  focusSlug?: string
+  className?: string
+}
+
+export function SitePreview({ draft, focusSlug, className = '' }: SitePreviewProps) {
+  const frame = useRef<HTMLIFrameElement>(null)
+  const [device, setDevice] = useState<Device>('desktop')
+  const [ready, setReady] = useState(false)
+  const [nonce, setNonce] = useState(0)
+
+  // The site announces when its bundle has booted. Posting before that would
+  // send the first draft into a page not yet listening.
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== frame.current?.contentWindow) return
+      if (event.data?.type === 'preview-ready') setReady(true)
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [])
+
+  useEffect(() => {
+    if (!ready) return
+    frame.current?.contentWindow?.postMessage({ type: 'preview-draft', draft }, SITE_URL)
+  }, [ready, draft])
+
+  useEffect(() => {
+    if (!ready || !focusSlug) return
+    frame.current?.contentWindow?.postMessage({ type: 'preview-scroll', slug: focusSlug }, SITE_URL)
+  }, [ready, focusSlug])
+
+  return (
+    <div className={`flex min-h-0 flex-col border border-olive-line bg-cream ${className}`}>
+      <header className="flex items-center justify-between gap-2 border-b border-sand-line px-3 py-2">
+        <p className="font-body text-xs tracking-[0.14em] text-olive uppercase">
+          Como vai ficar
+        </p>
+        <div className="flex items-center gap-1">
+          {(Object.keys(DEVICES) as Device[]).map((key) => {
+            const { label, icon: Icon } = DEVICES[key]
+            return (
+              <button
+                key={key}
+                type="button"
+                title={label}
+                aria-label={label}
+                aria-pressed={device === key}
+                onClick={() => setDevice(key)}
+                className={`cursor-pointer border p-1.5 transition-colors ${
+                  device === key
+                    ? 'border-olive bg-olive text-cream'
+                    : 'border-transparent text-dark-gray hover:text-olive'
+                }`}
+              >
+                <Icon className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )
+          })}
+          <button
+            type="button"
+            title="Recarregar o preview"
+            aria-label="Recarregar o preview"
+            onClick={() => {
+              setReady(false)
+              setNonce((n) => n + 1)
+            }}
+            className="cursor-pointer border border-transparent p-1.5 text-dark-gray transition-colors hover:text-olive"
+          >
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      </header>
+
+      <div className="flex min-h-0 flex-1 justify-center overflow-auto bg-veil p-3">
+        <iframe
+          key={nonce}
+          ref={frame}
+          // The query mark plus being framed is what puts the site into preview
+          // mode; it refuses to accept a draft without both.
+          src={`${SITE_URL}/?preview=1`}
+          title="Preview do site"
+          className="h-full min-h-[36rem] border border-sand-line bg-cream"
+          style={{ width: DEVICES[device].width, maxWidth: '100%' }}
+        />
+      </div>
+    </div>
+  )
+}

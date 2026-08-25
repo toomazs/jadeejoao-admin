@@ -1,0 +1,76 @@
+@import './tokens.css';
+@import 'tailwindcss';
+
+/*
+ * Map design tokens to Tailwind utilities (values stay in tokens.css).
+ * The default Tailwind palette is removed so only brand colors exist — the
+ * panel wears the same clothes as the site, so the couple never wonders
+ * whether they are looking at their own wedding.
+ */
+@theme {
+  --color-*: initial;
+}
+
+@theme inline {
+  --color-olive: var(--olive);
+  --color-deep-olive: var(--deep-olive);
+  --color-terracotta: var(--terracotta);
+  --color-gold-sand: var(--gold-sand);
+  --color-cream: var(--cream);
+  --color-dark-gray: var(--dark-gray);
+  --color-ink: var(--ink);
+
+  --color-veil: var(--veil);
+  --color-sand-line: var(--sand-line);
+  --color-olive-line: var(--olive-line);
+  --color-terracotta-deep: var(--terracotta-deep);
+  --color-cream-soft: var(--cream-soft);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-accent: var(--font-accent);
+}
+
+@layer base {
+  body {
+    background-color: var(--veil);
+    color: var(--ink);
+    font-family: var(--font-body);
+    /*
+     * Operate mode: this is a tool, not a room to walk through. Text is set
+     * smaller and tighter than on the site because the couple reads tables
+     * here, not invitations.
+     */
+    font-size: 15px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--olive);
+    outline-offset: 2px;
+  }
+
+  /* Numbers in tables must line up; proportional digits make them wobble. */
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* A row settling in after a save, the only motion the panel needs. */
+  .row-in {
+    animation: row-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes row-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

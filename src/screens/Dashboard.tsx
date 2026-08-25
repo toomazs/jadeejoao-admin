@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 
 import { $api } from '../api/client'
 import { ScreenTitle } from '../components/Shell'
-import { Empty, Panel, Stat } from '../components/ui'
+import { Card, Empty, Stat } from '../components/ui'
 import { CATEGORY_PT } from '../lib/labels'
 
 /**
@@ -34,7 +34,7 @@ export function Dashboard() {
       </div>
 
       {byCategory.length > 0 ? (
-        <Panel title="Quem confirmou, por faixa" className="mt-6">
+        <Card title="Quem confirmou, por faixa" className="mt-6">
           <div className="flex flex-wrap gap-x-8 gap-y-3 px-4 py-4">
             {byCategory.map(([key, n]) => (
               <p key={key} className="font-body text-sm text-dark-gray">
@@ -43,11 +43,11 @@ export function Dashboard() {
               </p>
             ))}
           </div>
-        </Panel>
+        </Card>
       ) : null}
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <Panel
+        <Card
           title="Recados esperando"
           actions={
             <Link to="/recados" className="font-body text-sm text-olive underline underline-offset-4">
@@ -67,9 +67,9 @@ export function Dashboard() {
               ))}
             </ul>
           )}
-        </Panel>
+        </Card>
 
-        <Panel
+        <Card
           title="PIX a confirmar"
           actions={
             <Link to="/contribuicoes" className="font-body text-sm text-olive underline underline-offset-4">
@@ -94,7 +94,7 @@ export function Dashboard() {
               ))}
             </ul>
           )}
-        </Panel>
+        </Card>
       </div>
     </>
   )

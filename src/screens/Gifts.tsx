@@ -6,7 +6,7 @@ import { $api, problemDetail } from '../api/client'
 import { ScreenTitle } from '../components/Shell'
 import { SitePreview } from '../components/SitePreview'
 import type { Draft } from '../components/SitePreview'
-import { Button, Empty, Field, Notice, Panel } from '../components/ui'
+import { Button, Card, Chip, ConfirmModal, Empty, Field, Notice, Toggle } from '../components/ui'
 import { money } from '../lib/labels'
 
 type Kind = 'link' | 'pix'
@@ -55,6 +55,7 @@ const num = (v: string): number | undefined => {
  */
 export function Gifts() {
   const [form, setForm] = useState<GiftForm | null>(null)
+  const [confirming, setConfirming] = useState<{ id: string; title: string } | null>(null)
   const [error, setError] = useState('')
   const queryClient = useQueryClient()
 
@@ -140,7 +141,7 @@ export function Gifts() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,30rem)_1fr]">
         <div className="min-w-0">
           {form ? (
-            <Panel title={form.gift_id ? 'Editando' : 'Novo presente'} className="mb-4">
+            <Card title={form.gift_id ? 'Editando' : 'Novo presente'} className="mb-4">
               <div className="grid gap-3 px-4 py-4">
                 {/* Kind is chosen once and shapes everything below it. The API
                     freezes it after the first contribution, so an existing PIX
@@ -223,15 +224,13 @@ export function Gifts() {
                     onChange={(e) => setForm({ ...form, sort: e.target.value })}
                     className="w-28"
                   />
-                  <label className="flex min-h-10 cursor-pointer items-center gap-2 font-body text-sm text-dark-gray">
-                    <input
-                      type="checkbox"
+                  <div className="min-h-10 pt-5">
+                    <Toggle
                       checked={form.active}
-                      onChange={(e) => setForm({ ...form, active: e.target.checked })}
-                      className="h-4 w-4 accent-olive"
+                      onChange={(on) => setForm({ ...form, active: on })}
+                      label="Aparece no site"
                     />
-                    Aparece no site
-                  </label>
+                  </div>
                 </div>
 
                 <div className="mt-1 flex gap-2">
@@ -243,10 +242,10 @@ export function Gifts() {
                   </Button>
                 </div>
               </div>
-            </Panel>
+            </Card>
           ) : null}
 
-          <Panel title={`${all.length} presentes`}>
+          <Card title={`${all.length} presentes`}>
             {gifts.isPending ? (
               <Empty>·</Empty>
             ) : all.length === 0 ? (
@@ -263,7 +262,9 @@ export function Gifts() {
                       <p className="truncate font-body text-sm text-ink">
                         {g.title}
                         {g.active === false ? (
-                          <span className="ml-2 font-body text-xs text-dark-gray">· oculto</span>
+                          <span className="ml-2 align-middle">
+                            <Chip>oculto</Chip>
+                          </span>
                         ) : null}
                       </p>
                       <p className="font-body text-xs text-dark-gray">
@@ -277,13 +278,7 @@ export function Gifts() {
                     <button
                       type="button"
                       aria-label={`Remover ${g.title}`}
-                      onClick={() => {
-                        if (!window.confirm(`Remover "${g.title}" do site?`)) return
-                        remove.mutate(
-                          { params: { path: { gift_id: g.gift_id } } },
-                          { onSuccess: done, onError: fail },
-                        )
-                      }}
+                      onClick={() => setConfirming({ id: g.gift_id, title: g.title })}
                       className="shrink-0 cursor-pointer text-dark-gray/60 transition-colors hover:text-terracotta"
                     >
                       <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -292,8 +287,23 @@ export function Gifts() {
                 ))}
               </ul>
             )}
-          </Panel>
+          </Card>
         </div>
+
+        {confirming ? (
+          <ConfirmModal
+            title="Remover presente"
+            message={`"${confirming.title}" sai do site. Se já tiver contribuição, ele é apenas escondido — o histórico fica.`}
+            confirmLabel="Remover"
+            onClose={() => setConfirming(null)}
+            onConfirm={() =>
+              remove.mutate(
+                { params: { path: { gift_id: confirming.id } } },
+                { onSuccess: done, onError: fail },
+              )
+            }
+          />
+        ) : null}
 
         <SitePreview
           draft={previewDraft}

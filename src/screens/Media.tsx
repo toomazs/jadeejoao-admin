@@ -4,7 +4,7 @@ import { useRef, useState } from 'react'
 
 import { $api, problemDetail } from '../api/client'
 import { ScreenTitle } from '../components/Shell'
-import { Button, Empty, Notice, Panel } from '../components/ui'
+import { Button, Card, ConfirmModal, Empty, Notice } from '../components/ui'
 
 /**
  * The image library. Every photo the site shows lives in the bucket, and the
@@ -14,6 +14,7 @@ import { Button, Empty, Notice, Panel } from '../components/ui'
 export function Media() {
   const [error, setError] = useState('')
   const [copied, setCopied] = useState('')
+  const [confirming, setConfirming] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
@@ -81,7 +82,7 @@ export function Media() {
 
       <Notice kind="error">{error}</Notice>
 
-      <Panel className="mt-2">
+      <Card className="mt-2">
         {media.isPending ? (
           <Empty>·</Empty>
         ) : items.length === 0 ? (
@@ -116,16 +117,7 @@ export function Media() {
                     type="button"
                     title="Apagar"
                     aria-label={`Apagar imagem ${m.alt ?? ''}`}
-                    onClick={() => {
-                      if (!window.confirm('Apagar esta imagem? Onde ela estiver em uso, o site fica sem ela.')) return
-                      remove.mutate(
-                        { params: { path: { media_id: m.media_id } } },
-                        {
-                          onSuccess: () => void queryClient.invalidateQueries(),
-                          onError: (err) => setError(problemDetail(err)),
-                        },
-                      )
-                    }}
+                    onClick={() => setConfirming(m.media_id)}
                     className="cursor-pointer text-dark-gray/60 transition-colors hover:text-terracotta"
                   >
                     <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -135,7 +127,24 @@ export function Media() {
             ))}
           </ul>
         )}
-      </Panel>
+      </Card>
+
+      {confirming ? (
+        <ConfirmModal
+          title="Apagar imagem"
+          message="Onde esta imagem estiver em uso, o site fica sem ela. Confira antes nas seções de conteúdo."
+          onClose={() => setConfirming(null)}
+          onConfirm={() =>
+            remove.mutate(
+              { params: { path: { media_id: confirming } } },
+              {
+                onSuccess: () => void queryClient.invalidateQueries(),
+                onError: (err) => setError(problemDetail(err)),
+              },
+            )
+          }
+        />
+      ) : null}
     </>
   )
 }

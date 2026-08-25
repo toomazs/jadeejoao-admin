@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import { $api, problemDetail } from '../api/client'
-import { Button, Field, Notice } from './ui'
+import { Button, Field, Modal, Notice, Select } from './ui'
 import { CATEGORIES, CATEGORY_ONE, GENDERS, GENDER_PT, SIDES, SIDE_PT } from '../lib/labels'
 
 interface Row {
@@ -88,29 +88,22 @@ export function GuestEditor({ row, allRows, onClose, onSaved }: GuestEditorProps
   }
 
   return (
-    <div
-      className="fixed inset-0 z-30 flex items-start justify-center overflow-y-auto bg-ink/45 px-4 py-8"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Editar ${row.fullName}`}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose()
-      }}
+    <Modal
+      title={row.fullName}
+      subtitle="A presença não se edita aqui — ela pertence à confirmação do convidado."
+      onClose={onClose}
+      footer={
+        <>
+          <Button tone="quiet" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button onClick={submit} disabled={save.isPending || rename.isPending}>
+            {save.isPending || rename.isPending ? 'Salvando…' : 'Salvar'}
+          </Button>
+        </>
+      }
     >
-      <div className="w-full max-w-lg border border-olive-line bg-cream">
-        <header className="flex items-center justify-between border-b border-sand-line px-4 py-3">
-          <h2 className="font-display text-xl text-olive">{row.fullName}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Fechar"
-            className="cursor-pointer px-2 font-body text-sm text-dark-gray hover:text-olive"
-          >
-            fechar
-          </button>
-        </header>
-
-        <div className="grid gap-3 px-4 py-4">
+      <div className="grid gap-3">
           <Field label="Nome completo" value={name} onChange={(e) => setName(e.target.value)} />
 
           <div className="grid gap-3 sm:grid-cols-3">
@@ -135,24 +128,21 @@ export function GuestEditor({ row, allRows, onClose, onSaved }: GuestEditorProps
             hint="O título que o convidado vê ao encontrar o convite."
           />
 
-          <label className="block">
-            <span className="font-body text-sm text-dark-gray">Juntar a outro convite</span>
-            <select
+          <div>
+            <Select
+              label="Juntar a outro convite"
               value={moveTo}
-              onChange={(event) => setMoveTo(event.target.value)}
-              className="mt-1 min-h-10 w-full border border-olive-line bg-cream px-2 font-body text-sm text-ink focus:border-olive"
-            >
-              <option value="">— manter onde está —</option>
-              {invitations.map(([id, text]) => (
-                <option key={id} value={id}>
-                  {text}
-                </option>
-              ))}
-            </select>
-            <span className="mt-1 block font-body text-xs text-dark-gray">
-              Quem responde passa a ser o principal do convite de destino.
-            </span>
-          </label>
+              onChange={setMoveTo}
+              placeholder="— manter onde está —"
+              options={[
+                { value: '', label: '— manter onde está —' },
+                ...invitations.map(([id, text]) => ({ value: id, label: text })),
+              ]}
+            />
+            <p className="mt-1 font-body text-xs text-dark-gray">
+              Quem responde continua sendo o principal do convite de destino.
+            </p>
+          </div>
 
           {moveTo ? (
             <Button
@@ -172,17 +162,8 @@ export function GuestEditor({ row, allRows, onClose, onSaved }: GuestEditorProps
 
           <Notice kind="error">{error}</Notice>
 
-          <div className="mt-1 flex gap-2">
-            <Button onClick={submit} disabled={save.isPending || rename.isPending}>
-              {save.isPending || rename.isPending ? 'Salvando…' : 'Salvar'}
-            </Button>
-            <Button tone="quiet" onClick={onClose}>
-              Cancelar
-            </Button>
-          </div>
-        </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -200,20 +181,14 @@ function Pick({
   labels: Record<string, string>
 }) {
   return (
-    <label className="block">
-      <span className="font-body text-sm text-dark-gray">{label}</span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-1 min-h-10 w-full border border-olive-line bg-cream px-2 font-body text-sm text-ink focus:border-olive"
-      >
-        <option value="">—</option>
-        {options.map((key) => (
-          <option key={key} value={key}>
-            {labels[key] ?? key}
-          </option>
-        ))}
-      </select>
-    </label>
+    <Select
+      label={label}
+      value={value}
+      onChange={onChange}
+      options={[
+        { value: '', label: '—' },
+        ...options.map((key) => ({ value: key, label: labels[key] ?? key })),
+      ]}
+    />
   )
 }

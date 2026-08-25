@@ -6,7 +6,7 @@ import { PayloadEditor } from '../components/PayloadEditor'
 import { ScreenTitle } from '../components/Shell'
 import { SitePreview } from '../components/SitePreview'
 import type { Draft } from '../components/SitePreview'
-import { Button, Notice } from '../components/ui'
+import { Button, Notice, Toggle } from '../components/ui'
 import { SECTION_PT } from '../lib/labels-fields'
 
 type Section = Record<string, unknown> & { slug: string; enabled?: boolean }
@@ -106,20 +106,21 @@ export function Content() {
         <div className="min-w-0 border border-olive-line bg-cream px-4 py-4">
           {draft ? (
             <>
-              <label className="flex cursor-pointer items-center gap-2 border-b border-sand-line pb-3 font-body text-sm text-dark-gray">
-                <input
-                  type="checkbox"
+              <div className="border-b border-sand-line pb-3">
+                <Toggle
                   checked={draft.enabled !== false}
-                  onChange={(event) => setDraft({ ...draft, enabled: event.target.checked })}
-                  className="h-4 w-4 accent-olive"
+                  onChange={(on) => setDraft({ ...draft, enabled: on })}
+                  label="Mostrar esta seção no site"
+                  hint="Desligada, ela some do site inteiro."
                 />
-                Mostrar esta seção no site
-              </label>
+              </div>
               <div className="mt-4">
                 <PayloadEditor
                   value={payload}
                   path={slug}
                   onChange={(next) => setDraft({ ...draft, [slug]: next as never })}
+                  onSave={submit}
+                  saving={save.isPending}
                 />
               </div>
             </>

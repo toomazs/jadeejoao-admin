@@ -3,8 +3,15 @@ import { useState } from 'react'
 
 import { $api, problemDetail } from '../api/client'
 import { ScreenTitle } from '../components/Shell'
-import { Button, Empty, Notice, Panel } from '../components/ui'
+import { Button, Card, Chip, Empty, Notice } from '../components/ui'
+import type { ChipTone } from '../components/ui'
 import { MESSAGE_STATUS_PT, shortDate } from '../lib/labels'
+
+const MSG_TONE: Record<string, ChipTone> = {
+  approved: 'yes',
+  rejected: 'no',
+  pending: 'waiting',
+}
 
 type Filter = 'pending' | 'approved' | 'rejected' | 'all'
 
@@ -70,7 +77,7 @@ export function Messages() {
 
       <Notice kind="error">{error}</Notice>
 
-      <Panel className="mt-2">
+      <Card className="mt-2">
         {messages.isPending ? (
           <Empty>·</Empty>
         ) : shown.length === 0 ? (
@@ -81,8 +88,11 @@ export function Messages() {
               <li key={m.message_id} className="row-in px-4 py-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="font-display text-lg text-olive">{m.author_name}</p>
-                  <p className="font-body text-xs text-dark-gray">
-                    {shortDate(m.created_at)} · {MESSAGE_STATUS_PT[m.status] ?? m.status}
+                  <p className="flex items-center gap-2 font-body text-xs text-dark-gray">
+                    {shortDate(m.created_at)}
+                    <Chip tone={MSG_TONE[m.status] ?? 'neutral'}>
+                      {MESSAGE_STATUS_PT[m.status] ?? m.status}
+                    </Chip>
                   </p>
                 </div>
                 {/* Guests write with line breaks and they carry meaning. */}
@@ -104,7 +114,7 @@ export function Messages() {
             ))}
           </ul>
         )}
-      </Panel>
+      </Card>
     </>
   )
 }

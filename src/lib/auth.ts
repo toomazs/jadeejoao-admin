@@ -43,14 +43,3 @@ export async function signIn(email: string, password: string) {
 export async function signOut() {
   await supabase.auth.signOut()
 }
-
-/**
- * Refetches the session from Supabase so a just-changed app_metadata claim is
- * picked up. Called after the password change: the old token still carries the
- * obligation, and without this the panel would keep showing the change screen
- * to somebody who already changed it.
- */
-export async function refreshSession(): Promise<Session | null> {
-  const { data } = await supabase.auth.refreshSession()
-  return data.session
-}

@@ -29,6 +29,27 @@
   --font-display: var(--font-display);
   --font-body: var(--font-body);
   --font-accent: var(--font-accent);
+
+  /*
+   * The type scale is shifted up a step from Tailwind's default.
+   *
+   * Arapey is a light face: below about 16px its strokes thin out and the
+   * panel reads as though the browser were zoomed out. The site solved this
+   * with an 18px floor; a tool needs to stay denser than a page, but not by
+   * going faint. So every step moves up one notch and nothing lands under
+   * 14px — which is what `text-xs` now means.
+   */
+  --text-xs: 0.875rem;
+  --text-xs--line-height: 1.35;
+  --text-sm: 1rem;
+  --text-sm--line-height: 1.45;
+  --text-base: 1.125rem;
+  --text-base--line-height: 1.55;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.5;
+  --text-xl: 1.5rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.125rem;
 }
 
 @layer base {
@@ -37,12 +58,12 @@
     color: var(--ink);
     font-family: var(--font-body);
     /*
-     * Operate mode: this is a tool, not a room to walk through. Text is set
-     * smaller and tighter than on the site because the couple reads tables
-     * here, not invitations.
+     * Operate mode is denser than the site, but density is about spacing, not
+     * about shrinking the letters: Arapey goes faint below 16px and the whole
+     * panel starts looking like a zoomed-out page.
      */
-    font-size: 15px;
-    line-height: 1.45;
+    font-size: 1.0625rem;
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
   }
 
@@ -55,6 +76,17 @@
   table {
     font-variant-numeric: tabular-nums;
   }
+}
+
+/*
+ * Afrah is a hairline display face: at screen resolutions its thinnest joins
+ * drop out and titles read broken. The same fraction of a pixel of stroke the
+ * site uses, in the text's own colour — the bold weight is far too heavy for
+ * this face and the couple ruled it out.
+ */
+.font-display {
+  -webkit-text-stroke: 0.4px currentColor;
+  paint-order: stroke fill;
 }
 
 @media (prefers-reduced-motion: no-preference) {

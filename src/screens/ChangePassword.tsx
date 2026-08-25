@@ -16,7 +16,8 @@ const MIN = 10
  * of mysterious.
  */
 export function ChangePassword() {
-  const { email, reload, leave } = useSession()
+  const { email, leave } = useSession()
+  const [done, setDone] = useState(false)
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const [repeat, setRepeat] = useState('')
@@ -32,13 +33,31 @@ export function ChangePassword() {
     change.mutate(
       { body: { current_password: current, new_password: next } },
       {
-        onSuccess: () => {
-          // The token in hand still carries the obligation; only a refreshed
-          // one clears it, and without this the panel would keep asking.
-          void reload()
-        },
+        // Supabase revokes every session when a password changes, this one
+        // included — so there is no refreshing into the panel from here. Say
+        // that plainly: bouncing back to the login screen without a word looks
+        // exactly like the change having failed.
+        onSuccess: () => setDone(true),
         onError: (err) => setError(problemDetail(err, 'Não conseguimos trocar a senha agora.')),
       },
+    )
+  }
+
+  if (done) {
+    return (
+      <main className="grid min-h-svh place-items-center px-4">
+        <div className="w-full max-w-sm border border-olive-line bg-cream px-6 py-9 text-center">
+          <img src={logo} alt="" aria-hidden="true" className="mx-auto h-12 w-auto" />
+          <h1 className="mt-5 font-display text-2xl text-olive">Senha trocada</h1>
+          <p className="mt-2 font-body text-sm text-dark-gray">
+            Por segurança, a troca encerra as sessões abertas. Entre de novo com a senha que você
+            acabou de escolher.
+          </p>
+          <Button onClick={() => void leave()} className="mt-6 w-full">
+            Ir para a entrada
+          </Button>
+        </div>
+      </main>
     )
   }
 

@@ -1,6 +1,8 @@
 import { ChevronDown, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
+import { DateTimeField, ImageField } from './fields'
+import { Checkbox, DateField } from './ui'
 import { FIELD_PT } from '../lib/labels-fields'
 
 /**
@@ -24,12 +26,23 @@ interface EditorProps {
   onChange: (next: Json) => void
   /** Dotted path, used for labels and for keying inputs. */
   path?: string
+  /**
+   * Saves the whole section. Offered inside each list item so a long
+   * programme does not force a trip back to the top after every edit — what
+   * it saves is still the section, because that is what the API stores.
+   */
+  onSave?: () => void
+  saving?: boolean
 }
 
 /** Keys whose value is prose rather than a phrase. */
 const LONG_TEXT = /body|bio|letter|notes|description|attire|parking/i
-/** Keys holding an image address, worth previewing. */
+/** Keys holding a photograph the couple should be able to replace and crop. */
 const IMAGE = /image_url|photo_url|logo_url/i
+/** Keys holding a moment in time rather than a string that looks like one. */
+const DATETIME = /datetime/i
+/** Keys holding a plain calendar date. */
+const DATE_ONLY = /^(date|deadline)$/i
 
 function humanize(key: string): string {
   return FIELD_PT[key] ?? key.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase())
@@ -64,26 +77,26 @@ function TextInput({
   )
 }
 
-export function PayloadEditor({ value, onChange, path = '' }: EditorProps) {
+export function PayloadEditor({ value, onChange, path = '', onSave, saving }: EditorProps) {
   if (value === null) {
     return <p className="font-body text-xs text-dark-gray italic">vazio</p>
   }
 
   if (typeof value === 'string') {
     const key = path.split('.').pop() ?? ''
-    return (
-      <>
-        <TextInput keyName={key} value={value} onChange={(v) => onChange(v)} />
-        {IMAGE.test(key) && value ? (
-          <img
-            src={value}
-            alt=""
-            className="mt-2 h-20 w-auto border border-sand-line object-cover"
-            loading="lazy"
-          />
-        ) : null}
-      </>
-    )
+    // Some strings are not text. A date typed by hand breaks the countdown
+    // with one wrong digit, and a photo pasted as a URL means cropping it
+    // somewhere else first.
+    if (DATETIME.test(key)) {
+      return <DateTimeField value={value} onChange={onChange} />
+    }
+    if (DATE_ONLY.test(key)) {
+      return <DateField value={value} onChange={onChange} className="mt-0 w-56" />
+    }
+    if (IMAGE.test(key)) {
+      return <ImageField fieldKey={key} value={value} onChange={onChange} />
+    }
+    return <TextInput keyName={key} value={value} onChange={(v) => onChange(v)} />
   }
 
   if (typeof value === 'number') {
@@ -99,20 +112,14 @@ export function PayloadEditor({ value, onChange, path = '' }: EditorProps) {
 
   if (typeof value === 'boolean') {
     return (
-      <label className="mt-1 flex cursor-pointer items-center gap-2 font-body text-sm text-dark-gray">
-        <input
-          type="checkbox"
-          checked={value}
-          onChange={(event) => onChange(event.target.checked)}
-          className="h-4 w-4 accent-olive"
-        />
-        {value ? 'sim' : 'não'}
-      </label>
+      <div className="mt-1">
+        <Checkbox checked={value} onChange={onChange} label={value ? 'sim' : 'não'} />
+      </div>
     )
   }
 
   if (Array.isArray(value)) {
-    return <ArrayEditor items={value} onChange={onChange} path={path} />
+    return <ArrayEditor items={value} onChange={onChange} path={path} onSave={onSave} saving={saving} />
   }
 
   return (
@@ -126,6 +133,8 @@ export function PayloadEditor({ value, onChange, path = '' }: EditorProps) {
             value={child}
             path={path ? `${path}.${key}` : key}
             onChange={(next) => onChange({ ...value, [key]: next })}
+            onSave={onSave}
+            saving={saving}
           />
         </label>
       ))}
@@ -142,10 +151,14 @@ function ArrayEditor({
   items,
   onChange,
   path,
+  onSave,
+  saving,
 }: {
   items: Json[]
   onChange: (next: Json) => void
   path: string
+  onSave?: () => void
+  saving?: boolean
 }) {
   const [open, setOpen] = useState<number | null>(items.length === 1 ? 0 : null)
 
@@ -205,6 +218,16 @@ function ArrayEditor({
                 path={path}
                 onChange={(next) => onChange(items.map((old, i) => (i === index ? next : old)))}
               />
+              {onSave ? (
+                <button
+                  type="button"
+                  onClick={onSave}
+                  disabled={saving}
+                  className="mt-3 min-h-9 cursor-pointer border border-olive bg-olive px-4 font-body text-sm text-cream transition-colors hover:bg-deep-olive disabled:opacity-40"
+                >
+                  {saving ? 'Salvando…' : 'Salvar'}
+                </button>
+              ) : null}
             </div>
           ) : null}
         </div>

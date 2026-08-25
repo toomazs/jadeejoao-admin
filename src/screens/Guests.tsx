@@ -7,11 +7,12 @@ import { GuestEditor } from '../components/GuestEditor'
 import { ImportReport } from '../components/ImportReport'
 import type { Report } from '../components/ImportReport'
 import { ScreenTitle } from '../components/Shell'
-import { Button, Empty, Notice, Panel, SkeletonRows, Stat } from '../components/ui'
-import { ATTENDING_PT, CATEGORY_ONE, SIDE_PT } from '../lib/labels'
+import { Button, Chip, ConfirmModal, DataTable, Notice, SearchField, Stat } from '../components/ui'
+import type { ChipTone, Column } from '../components/ui'
 import { supabase } from '../lib/auth'
+import { ATTENDING_PT, CATEGORY_ONE, SIDE_PT } from '../lib/labels'
 
-type Row = {
+interface Row {
   groupId: string
   groupLabel: string
   guestId: string
@@ -28,23 +29,21 @@ type Row = {
   groupSize: number
 }
 
-const ALL = '__todos__'
+const TONE: Record<string, ChipTone> = { yes: 'yes', no: 'no', pending: 'waiting' }
 
 /**
  * The guest list — the screen the couple will actually live in.
  *
- * Flattened to one row per person rather than nested by invitation, because
- * every question they ask ("who hasn't answered?", "how many children?", "who
- * is on João's side?") is about people, and a nested tree would make each one
- * a hunt. The invitation is still there, as a column and as the thing the
- * repair actions act on.
+ * One row per person rather than a tree of invitations, because every question
+ * they ask ("who hasn't answered?", "how many children?", "who is on João's
+ * side?") is about people. Those questions are answered in the column headers:
+ * click to sort, funnel to narrow. The invitation is still there, as a column
+ * and as what the repair actions act on.
  */
 export function Guests() {
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState(ALL)
-  const [side, setSide] = useState(ALL)
-  const [circle, setCircle] = useState(ALL)
   const [editing, setEditing] = useState<Row | null>(null)
+  const [confirming, setConfirming] = useState<Row | null>(null)
   const [error, setError] = useState('')
   const [report, setReport] = useState<Report | null>(null)
   const [importing, setImporting] = useState(false)
@@ -78,15 +77,9 @@ export function Guests() {
     [dashboard.data],
   )
 
-  const circles = useMemo(
-    () => [...new Set(rows.map((r) => r.circle).filter(Boolean))].sort(),
-    [rows],
-  )
-
+  // Search spans the fields somebody would actually search by; the columns
+  // handle the rest, so this stays one box instead of four.
   const shown = rows.filter((r) => {
-    if (status !== ALL && r.attending !== status) return false
-    if (side !== ALL && r.side !== side) return false
-    if (circle !== ALL && r.circle !== circle) return false
     if (!search.trim()) return true
     const needle = search.trim().toLowerCase()
     return (
@@ -100,7 +93,7 @@ export function Guests() {
   const done = () => void queryClient.invalidateQueries()
   const fail = (err: unknown) => setError(problemDetail(err))
 
-  /** Export and import both need the session token; neither is JSON. */
+  /** Export and import both carry the session token and neither is JSON. */
   const authHeader = async () => {
     const { data } = await supabase.auth.getSession()
     return { Authorization: `Bearer ${data.session?.access_token ?? ''}` }
@@ -148,6 +141,116 @@ export function Guests() {
     }
   }
 
+  const columns: Column<Row>[] = [
+    {
+      key: 'name',
+      header: 'Nome',
+      value: (r) => r.fullName,
+      cell: (r) => (
+        <>
+          <button
+            type="button"
+            onClick={() => setEditing(r)}
+            className="cursor-pointer text-left font-body text-sm text-ink transition-colors hover:text-olive"
+          >
+            {r.fullName}
+          </button>
+          {r.ceremonyRole && r.ceremonyRole !== 'Convidado' ? (
+            <span className="ml-2 font-body text-xs text-gold-sand">{r.ceremonyRole}</span>
+          ) : null}
+          {r.addedByGuest ? (
+            <span className="ml-2 font-body text-xs text-dark-gray">· trazido</span>
+          ) : null}
+          {r.notes ? <p className="font-body text-xs text-dark-gray italic">{r.notes}</p> : null}
+        </>
+      ),
+    },
+    {
+      key: 'invitation',
+      header: 'Convite',
+      value: (r) => r.groupLabel,
+      cell: (r) => (
+        <span className="font-body text-sm text-dark-gray">
+          {r.groupLabel}
+          {r.groupSize > 1 ? <span className="ml-1 text-xs">({r.groupSize})</span> : null}
+        </span>
+      ),
+    },
+    {
+      key: 'attending',
+      header: 'Presença',
+      filterable: true,
+      value: (r) => ATTENDING_PT[r.attending] ?? r.attending,
+      cell: (r) => (
+        <Chip tone={TONE[r.attending] ?? 'neutral'}>{ATTENDING_PT[r.attending] ?? r.attending}</Chip>
+      ),
+    },
+    {
+      key: 'category',
+      header: 'Faixa',
+      filterable: true,
+      value: (r) => (r.category ? (CATEGORY_ONE[r.category] ?? r.category) : '—'),
+      cell: (r) => (
+        <span className="font-body text-sm text-dark-gray">
+          {r.category ? (CATEGORY_ONE[r.category] ?? r.category) : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'side',
+      header: 'De quem',
+      filterable: true,
+      value: (r) => (r.side ? (SIDE_PT[r.side] ?? r.side) : '—'),
+      cell: (r) => (
+        <span className="font-body text-sm text-dark-gray">
+          {r.side ? (SIDE_PT[r.side] ?? r.side) : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'circle',
+      header: 'Círculo',
+      filterable: true,
+      value: (r) => r.circle || '—',
+      cell: (r) => <span className="font-body text-sm text-dark-gray">{r.circle || '—'}</span>,
+    },
+    {
+      key: 'actions',
+      header: '',
+      sortable: false,
+      className: 'text-right',
+      cell: (r) => (
+        <div className="flex items-center justify-end gap-1">
+          {!r.isPrimary && r.groupSize > 1 ? (
+            <button
+              type="button"
+              title="Passar o convite para esta pessoa"
+              aria-label={`Passar o convite para ${r.fullName}`}
+              onClick={() =>
+                promote.mutate(
+                  { params: { path: { group_id: r.groupId } }, body: { guest_id: r.guestId } },
+                  { onSuccess: done, onError: fail },
+                )
+              }
+              className="cursor-pointer p-1 text-dark-gray/50 transition-colors hover:text-olive"
+            >
+              <Crown className="h-4 w-4" aria-hidden="true" />
+            </button>
+          ) : null}
+          <button
+            type="button"
+            title="Apagar convidado"
+            aria-label={`Apagar ${r.fullName}`}
+            onClick={() => setConfirming(r)}
+            className="cursor-pointer p-1 text-dark-gray/50 transition-colors hover:text-terracotta"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      ),
+    },
+  ]
+
   return (
     <>
       <ScreenTitle
@@ -191,138 +294,23 @@ export function Guests() {
       {report ? <ImportReport report={report} onClose={() => setReport(null)} /> : null}
       <Notice kind="error">{error}</Notice>
 
-      <div className="mt-5 flex flex-wrap items-end gap-3">
-        <label className="min-w-52 flex-1">
-          <span className="font-body text-xs tracking-[0.12em] text-dark-gray uppercase">Buscar</span>
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="nome, convite ou observação…"
-            className="mt-1 min-h-10 w-full border border-olive-line bg-cream px-3 font-body text-sm text-ink placeholder:text-dark-gray/45 focus:border-olive"
-          />
-        </label>
-        <Select label="Presença" value={status} onChange={setStatus} options={ATTENDING_PT} />
-        <Select label="De quem" value={side} onChange={setSide} options={SIDE_PT} />
-        <Select
-          label="Círculo"
-          value={circle}
-          onChange={setCircle}
-          options={Object.fromEntries(circles.map((c) => [c, c]))}
+      <SearchField
+        label="Buscar"
+        value={search}
+        onChange={setSearch}
+        placeholder="nome, convite ou observação…"
+        className="mt-5 max-w-md"
+      />
+
+      <div className="mt-4">
+        <DataTable
+          rows={shown}
+          columns={columns}
+          rowKey={(r) => r.guestId}
+          loading={dashboard.isPending}
+          empty="Ninguém com esses filtros."
         />
       </div>
-
-      <Panel title={`${shown.length} na tela`} className="mt-4 overflow-x-auto">
-        <table className="w-full min-w-[52rem] text-left">
-          <thead>
-            <tr className="font-body text-xs tracking-[0.12em] text-dark-gray uppercase">
-              <th className="px-4 py-2 font-normal">Nome</th>
-              <th className="px-4 py-2 font-normal">Convite</th>
-              <th className="px-4 py-2 font-normal">Presença</th>
-              <th className="px-4 py-2 font-normal">Faixa</th>
-              <th className="px-4 py-2 font-normal">De quem</th>
-              <th className="px-4 py-2 font-normal" />
-            </tr>
-          </thead>
-          <tbody>
-            {dashboard.isPending ? (
-              <SkeletonRows cols={6} rows={10} />
-            ) : shown.length === 0 ? (
-              <tr>
-                <td colSpan={6}>
-                  <Empty>Ninguém com esses filtros.</Empty>
-                </td>
-              </tr>
-            ) : (
-              shown.map((r) => (
-                <tr key={r.guestId} className="border-t border-sand-line hover:bg-veil">
-                  <td className="px-4 py-2.5">
-                    <button
-                      type="button"
-                      onClick={() => setEditing(r)}
-                      className="cursor-pointer text-left font-body text-sm text-ink hover:text-olive"
-                    >
-                      {r.fullName}
-                    </button>
-                    {r.ceremonyRole && r.ceremonyRole !== 'Convidado' ? (
-                      <span className="ml-2 font-body text-xs text-gold-sand">{r.ceremonyRole}</span>
-                    ) : null}
-                    {r.addedByGuest ? (
-                      <span className="ml-2 font-body text-xs text-dark-gray">· trazido</span>
-                    ) : null}
-                    {r.notes ? (
-                      <p className="font-body text-xs text-dark-gray italic">{r.notes}</p>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-2.5 font-body text-sm text-dark-gray">
-                    {r.groupLabel}
-                    {r.groupSize > 1 ? (
-                      <span className="ml-1 text-xs">({r.groupSize})</span>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-2.5 font-body text-sm">
-                    <span
-                      className={
-                        r.attending === 'yes'
-                          ? 'text-olive'
-                          : r.attending === 'no'
-                            ? 'text-terracotta'
-                            : 'text-dark-gray'
-                      }
-                    >
-                      {ATTENDING_PT[r.attending] ?? r.attending}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 font-body text-sm text-dark-gray">
-                    {r.category ? (CATEGORY_ONE[r.category] ?? r.category) : '—'}
-                  </td>
-                  <td className="px-4 py-2.5 font-body text-sm text-dark-gray">
-                    {r.side ? (SIDE_PT[r.side] ?? r.side) : '—'}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex items-center justify-end gap-1">
-                      {!r.isPrimary && r.groupSize > 1 ? (
-                        <button
-                          type="button"
-                          title="Passar o convite para esta pessoa"
-                          aria-label={`Passar o convite para ${r.fullName}`}
-                          onClick={() =>
-                            promote.mutate(
-                              {
-                                params: { path: { group_id: r.groupId } },
-                                body: { guest_id: r.guestId },
-                              },
-                              { onSuccess: done, onError: fail },
-                            )
-                          }
-                          className="cursor-pointer p-1 text-dark-gray/50 transition-colors hover:text-olive"
-                        >
-                          <Crown className="h-4 w-4" aria-hidden="true" />
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        title="Apagar convidado"
-                        aria-label={`Apagar ${r.fullName}`}
-                        onClick={() => {
-                          if (!window.confirm(`Apagar ${r.fullName} da lista? Isso não tem volta.`)) return
-                          remove.mutate(
-                            { params: { path: { guest_id: r.guestId } } },
-                            { onSuccess: done, onError: fail },
-                          )
-                        }}
-                        className="cursor-pointer p-1 text-dark-gray/50 transition-colors hover:text-terracotta"
-                      >
-                        <Trash2 className="h-4 w-4" aria-hidden="true" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </Panel>
 
       {editing ? (
         <GuestEditor
@@ -335,36 +323,20 @@ export function Guests() {
           }}
         />
       ) : null}
-    </>
-  )
-}
 
-function Select({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string
-  value: string
-  onChange: (v: string) => void
-  options: Record<string, string>
-}) {
-  return (
-    <label>
-      <span className="font-body text-xs tracking-[0.12em] text-dark-gray uppercase">{label}</span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-1 block min-h-10 border border-olive-line bg-cream px-2 font-body text-sm text-ink focus:border-olive"
-      >
-        <option value={ALL}>Todos</option>
-        {Object.entries(options).map(([key, text]) => (
-          <option key={key} value={key}>
-            {text}
-          </option>
-        ))}
-      </select>
-    </label>
+      {confirming ? (
+        <ConfirmModal
+          title="Apagar convidado"
+          message={`${confirming.fullName} sai da lista para sempre, junto com a resposta que tenha dado. Isso não tem volta.`}
+          onClose={() => setConfirming(null)}
+          onConfirm={() =>
+            remove.mutate(
+              { params: { path: { guest_id: confirming.guestId } } },
+              { onSuccess: done, onError: fail },
+            )
+          }
+        />
+      ) : null}
+    </>
   )
 }

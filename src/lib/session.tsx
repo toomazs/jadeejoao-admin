@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 
 import { setSessionLostHandler } from '../api/client'
-import { mustChangePassword, refreshSession, signOut, supabase } from './auth'
+import { mustChangePassword, signOut, supabase } from './auth'
 
 interface SessionState {
   session: Session | null
@@ -11,8 +11,6 @@ interface SessionState {
   ready: boolean
   mustChange: boolean
   email: string
-  /** Re-reads the session after a password change clears the obligation. */
-  reload: () => Promise<void>
   leave: () => Promise<void>
 }
 
@@ -48,7 +46,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     ready,
     mustChange: mustChangePassword(session),
     email: session?.user?.email ?? '',
-    reload: async () => setSession(await refreshSession()),
     leave: async () => {
       await signOut()
       setSession(null)

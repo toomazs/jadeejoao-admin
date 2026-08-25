@@ -48,7 +48,7 @@ export function Field({
   )
 }
 
-export function Panel({
+export function Card({
   title,
   actions,
   children,
@@ -121,3 +121,9 @@ export function Empty({ children }: { children: ReactNode }) {
     <p className="px-4 py-10 text-center font-body text-sm text-dark-gray italic">{children}</p>
   )
 }
+
+/**
+ * The old name for Card, kept so the screens that already use it keep working
+ * while they migrate.
+ */
+export const Panel = Card

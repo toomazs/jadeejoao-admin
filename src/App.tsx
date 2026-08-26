@@ -9,6 +9,7 @@ import { Dashboard } from './screens/Dashboard'
 import { Gifts } from './screens/Gifts'
 import { Guests } from './screens/Guests'
 import { Login } from './screens/Login'
+import { Instagram } from './screens/Instagram'
 import { Media } from './screens/Media'
 import { Messages } from './screens/Messages'
 
@@ -37,6 +38,7 @@ export function App() {
         <Route path="/presentes" element={<Gifts />} />
         <Route path="/contribuicoes" element={<Contributions />} />
         <Route path="/conteudo" element={<Content />} />
+        <Route path="/fotos-dos-capitulos" element={<Instagram />} />
         <Route path="/midia" element={<Media />} />
         <Route path="*" element={<Dashboard />} />
       </Routes>

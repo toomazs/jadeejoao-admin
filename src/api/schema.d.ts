@@ -230,6 +230,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/instagram/{person}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one gallery for editing
+         * @description Returns the stored gallery, read past the public cache so the panel always edits what is actually saved.
+         */
+        get: operations["get-admin-instagram-feed"];
+        /**
+         * Replace one gallery
+         * @description Writes the manifest and drops the cached copy, so the site shows the change immediately rather than at the end of the cache window.
+         */
+        put: operations["replace-admin-instagram-feed"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/media": {
         parameters: {
             query?: never;
@@ -632,6 +656,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AdminFeedOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example https://example.com/schemas/AdminFeedOutputBody.json
+             */
+            readonly $schema?: string;
+            posts: components["schemas"]["PostView"][] | null;
+        };
         AdminGiftView: {
             /** @description False quando o presente está escondido do site. */
             active: boolean;
@@ -1571,6 +1604,16 @@ export interface components {
             /** @description Section heading shown on the site. */
             title: string;
         };
+        ReplaceFeedInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example https://example.com/schemas/ReplaceFeedInputBody.json
+             */
+            readonly $schema?: string;
+            /** @description The gallery in display order. Sending fewer replaces the rest — this is not a merge. */
+            posts: components["schemas"]["PostView"][] | null;
+        };
         RowIssue: {
             /** Format: int64 */
             line: number;
@@ -2105,6 +2148,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImportOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-admin-instagram-feed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Whose gallery: the bride's or the groom's. */
+                person: "bride" | "groom";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFeedOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "replace-admin-instagram-feed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person: "bride" | "groom";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceFeedInputBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFeedOutputBody"];
                 };
             };
             /** @description Error */

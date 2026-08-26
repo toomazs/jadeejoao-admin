@@ -1234,44 +1234,20 @@ export interface components {
              */
             status: string;
         };
-        HeroMilestone: {
-            /**
-             * Format: date
-             * @description Optional date shown above the label.
-             */
-            date?: string;
-            /**
-             * Format: uri
-             * @description Public CDN photo; the site shows brand art while empty.
-             */
-            image_url?: string;
-            /**
-             * @description Short caption under the arch.
-             * @example O pedido
-             */
-            label: string;
-        };
         HeroPayload: {
-            /** @description Rich text as Markdown. */
-            body?: string;
             /** @example Atibaia – SP */
             city_label: string;
-            /** @example Jade & João */
-            couple_names: string;
             /**
-             * Format: date-time
-             * @description Ceremony start, ISO 8601 with America/Sao_Paulo offset.
-             * @example 2027-08-07T15:00:00-03:00
+             * Format: date
+             * @description Dia do casamento.
+             * @example 2027-08-07
              */
-            event_datetime: string;
-            /** Format: uri */
+            event_date: string;
+            /**
+             * Format: uri
+             * @description The full-bleed photograph behind the wordmark.
+             */
             hero_image_url?: string;
-            /** @description Public CDN image URLs. */
-            images?: string[] | null;
-            /** @description Up to three story arches rendered beside the names. */
-            milestones?: components["schemas"]["HeroMilestone"][] | null;
-            /** @description Section heading shown on the site. */
-            title: string;
         };
         ImportOutputBody: {
             /**
@@ -2191,8 +2167,8 @@ export interface operations {
         requestBody?: {
             content: {
                 "multipart/form-data": {
-                    /** @description Optional accessibility text. */
-                    alt: string;
+                    /** @description Accessibility text. Optional, but worth filling: it is what a screen reader says in place of the photo. */
+                    alt?: string;
                     /** Format: binary */
                     file: string;
                 };

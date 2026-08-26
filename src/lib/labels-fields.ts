@@ -15,10 +15,7 @@
  * hours earlier without a single visible clue.
  */
 export const FIELD_HINT: Record<string, string> = {
-  couple_names:
-    'Aparece na assinatura do rodapé. No topo do site quem aparece é a arte do logo, que não muda por aqui.',
-  event_datetime:
-    'A data aparece no topo, no Grande Dia e no rodapé. A hora não aparece em lugar nenhum, mas é até ela que a contagem regressiva conta.',
+  event_date: 'Aparece no topo, no Grande Dia e no rodapé.',
   hero_image_url: 'A foto grande de abertura, atrás do logo.',
   eye_x: 'Posição do olho da Catarina na foto, de onde saem as estrelinhas.',
   eye_y: 'Posição do olho da Catarina na foto, de onde saem as estrelinhas.',
@@ -38,7 +35,7 @@ export const FIELD_PT: Record<string, string> = {
   hero_image_url: 'Foto principal',
   images: 'Imagens',
   couple_names: 'Nome do casal',
-  event_datetime: 'Data e hora',
+  event_date: 'Data do casamento',
   city_label: 'Cidade',
   milestones: 'Marcos',
   date: 'Data',
@@ -107,12 +104,12 @@ export const SECTION_GROUPS: Record<string, FieldGroup[]> = {
   our_story: [
     { title: 'A noiva', keys: ['bride'] },
     { title: 'O noivo', keys: ['groom'] },
-    { title: 'Convite, entre os capítulos', keys: ['body'] },
     { title: 'Momentos do álbum', keys: ['title', 'moments'] },
     { title: 'As cartas', keys: ['letter_from_groom', 'letter_from_bride'] },
+    { title: 'Convite, entre os capítulos', keys: ['body'] },
     { title: 'O anúncio da Catarina', keys: ['announcement'] },
   ],
-  hero: [{ title: 'Abertura', keys: ['couple_names', 'event_datetime', 'city_label', 'hero_image_url'] }],
+  hero: [{ title: 'Abertura', keys: ['event_date', 'city_label', 'hero_image_url'] }],
   big_day: [
     { title: 'Textos', keys: ['title', 'body', 'venue_notes'] },
     { title: 'Programação', keys: ['programme'] },

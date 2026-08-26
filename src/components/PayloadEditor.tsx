@@ -90,8 +90,7 @@ function TextInput({
       <MarkdownField
         value={value}
         onChange={onChange}
-        rows={prose ? undefined : 2}
-      />
+        />
     );
   }
   return (
@@ -280,11 +279,15 @@ export function PayloadEditor({
         // A plain field labels itself. Deliberately NOT a <label> wrapping the
         // whole thing: some of these render as a group of buttons, and a label
         // around them makes clicking the caption open the first one.
+        // A list is already a column of accordions, one per item. Wrapping it
+        // in one more just names the same thing twice.
         return (
           <div key={key}>
-            <span className="block font-body text-xs tracking-[0.1em] text-dark-gray uppercase">
-              {humanize(key)}
-            </span>
+            {Array.isArray(child) ? null : (
+              <span className="block font-body text-xs tracking-[0.1em] text-dark-gray uppercase">
+                {humanize(key)}
+              </span>
+            )}
             {/* Some field names promise more than they deliver — the hint says
                 where the value actually lands, so nobody edits it twice
                 wondering why the site did not move. */}

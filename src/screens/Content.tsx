@@ -10,7 +10,7 @@ import {
 import { ScreenTitle } from "../components/Shell";
 import { SitePreview } from "../components/SitePreview";
 import type { Draft } from "../components/SitePreview";
-import { Button, Notice, Toggle } from "../components/ui";
+import { Button, Notice, SaveBar, shakeSaveBar, Toggle } from "../components/ui";
 import { SECTION_PT } from "../lib/labels-fields";
 import { hasPendingImages, uploadPendingImages } from "../lib/uploads";
 
@@ -128,18 +128,6 @@ export function Content() {
           <>
             <Notice kind="error">{error}</Notice>
             <Notice kind="ok">{saved}</Notice>
-            <Button
-              onClick={() => void submit()}
-              disabled={!dirty || save.isPending || uploading}
-            >
-              {uploading
-                ? "Enviando a foto…"
-                : save.isPending
-                  ? "Salvando…"
-                  : dirty
-                    ? "Salvar"
-                    : "Sem alterações"}
-            </Button>
           </>
         }
       />
@@ -150,6 +138,14 @@ export function Content() {
             key={s.slug}
             tone={slug === s.slug ? "primary" : "quiet"}
             onClick={() => {
+              if (s.slug === slug) return;
+              // Switching section throws the draft away — the effect above
+              // rebuilds it from the server copy — so while there is unsaved
+              // work the tabs do not switch at all. The bar shakes to point at
+              // itself, and it holds the two ways out: salvar or descartar.
+              // Nothing here is allowed to lose a sentence she just wrote by
+              // means of a misplaced click.
+              if (dirty && shakeSaveBar()) return;
               // Drop the anchor with the section. It outlives the tab
               // otherwise, and the preview prefers it over the section — so
               // leaving "Nossa história" with an album frame open and clicking
@@ -197,8 +193,6 @@ export function Content() {
                       onChange={(next) =>
                         setDraft({ ...draft, [slug]: next as never })
                       }
-                      onSave={() => void submit()}
-                      saving={save.isPending || uploading}
                     />
                   </div>
                 </>
@@ -222,6 +216,14 @@ export function Content() {
           </div>
         </PickContext>
       </FocusContext>
+
+      <SaveBar
+        visible={dirty}
+        saving={save.isPending || uploading}
+        label={uploading ? "Enviando a foto…" : undefined}
+        onSave={() => void submit()}
+        onReset={() => stored && setDraft(structuredClone(stored))}
+      />
     </>
   );
 }

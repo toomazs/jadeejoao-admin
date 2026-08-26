@@ -7,7 +7,6 @@ import { MarkdownField } from "./MarkdownField";
 import { Accordion, Button, Checkbox, DateField } from "./ui";
 import {
   FIELD_ANCHOR,
-  FIELD_HINT,
   FIELD_ONLY_IF,
   FIELD_PT,
   LIST_ITEM_ANCHOR,
@@ -49,13 +48,6 @@ interface EditorProps {
   onChange: (next: Json) => void;
   /** Dotted path, used for labels and for keying inputs. */
   path?: string;
-  /**
-   * Saves the whole section. Offered inside each list item so a long
-   * programme does not force a trip back to the top after every edit — what
-   * it saves is still the section, because that is what the API stores.
-   */
-  onSave?: () => void;
-  saving?: boolean;
   /**
    * The keys an entry of this list can hold, in payload order, and which of
    * them are optional. Borrowed from the sibling entries — the only
@@ -143,8 +135,6 @@ export function PayloadEditor({
   value,
   onChange,
   path = "",
-  onSave,
-  saving,
   shape,
   optional,
   blanks,
@@ -216,8 +206,6 @@ export function PayloadEditor({
         items={value}
         onChange={onChange}
         path={path}
-        onSave={onSave}
-        saving={saving}
       />
     );
   }
@@ -265,8 +253,6 @@ export function PayloadEditor({
                   value={lone as Json}
                   path={`${path}.${onlyKey}`}
                   onChange={(next) => onChange({ ...value, [onlyKey]: next })}
-                  onSave={onSave}
-                  saving={saving}
                 />
               ) : (
                 <PayloadEditor
@@ -275,11 +261,8 @@ export function PayloadEditor({
                   onChange={(next) =>
                     onChange({ ...value, ...(next as Record<string, Json>) })
                   }
-                  onSave={onSave}
-                  saving={saving}
                 />
               )}
-              <SaveRow onSave={onSave} saving={saving} />
             </Accordion>
           );
         })}
@@ -292,8 +275,6 @@ export function PayloadEditor({
             onChange={(next) =>
               onChange({ ...value, ...(next as Record<string, Json>) })
             }
-            onSave={onSave}
-            saving={saving}
           />
         ) : null}
       </div>
@@ -345,8 +326,6 @@ export function PayloadEditor({
             value={child}
             path={childPath}
             onChange={(next) => onChange({ ...value, [key]: next })}
-            onSave={onSave}
-            saving={saving}
           />
         );
 
@@ -375,7 +354,6 @@ export function PayloadEditor({
                   }
                 />
               ) : null}
-              <SaveRow onSave={onSave} saving={saving} />
             </Accordion>
           );
         }
@@ -408,14 +386,6 @@ export function PayloadEditor({
                 ) : null}
               </span>
             )}
-            {/* Some field names promise more than they deliver — the hint says
-                where the value actually lands, so nobody edits it twice
-                wondering why the site did not move. */}
-            {FIELD_HINT[key] ? (
-              <span className="mt-0.5 block font-body text-xs text-dark-gray italic">
-                {FIELD_HINT[key]}
-              </span>
-            ) : null}
             {editor}
           </div>
         );
@@ -476,14 +446,10 @@ function ArrayEditor({
   items,
   onChange,
   path,
-  onSave,
-  saving,
 }: {
   items: Json[];
   onChange: (next: Json) => void;
   path: string;
-  onSave?: () => void;
-  saving?: boolean;
 }) {
   const focusPreview = use(FocusContext);
 
@@ -601,7 +567,6 @@ function ArrayEditor({
             }
           />
 
-          <SaveRow onSave={onSave} saving={saving} />
         </Accordion>
       ))}
 
@@ -624,28 +589,6 @@ function ArrayEditor({
  * section can be a long column, and making the couple scroll back to the top
  * after editing one hotel is the kind of small friction that adds up.
  */
-export function SaveRow({
-  onSave,
-  saving,
-}: {
-  onSave?: () => void;
-  saving?: boolean;
-}) {
-  if (!onSave) return null;
-  return (
-    <div className="mt-3 flex justify-end">
-      <button
-        type="button"
-        onClick={onSave}
-        disabled={saving}
-        className="min-h-10 cursor-pointer border border-olive bg-olive px-4 font-body text-sm text-cream transition-colors hover:bg-deep-olive disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        {saving ? "Salvando…" : "Salvar"}
-      </button>
-    </div>
-  );
-}
-
 /** Asks the live preview for a point on the announcement photo. */
 function EyePicker({ onPicked }: { onPicked: (x: number, y: number) => void }) {
   const pick = use(PickContext);

@@ -85,3 +85,48 @@ export const SECTION_PT: Record<string, string> = {
   good_practices: 'Boas práticas',
   messages_intro: 'Recado aos noivos',
 }
+
+/**
+ * How a section's fields are ordered and bundled in the panel.
+ *
+ * The payload's key order comes from a Go struct, which is arranged for the
+ * API's own reasons — `title` and `body` first because every section inherits
+ * them. That is not the order somebody editing their own wedding thinks in:
+ * the couple's chapters come first, and the album's heading belongs with the
+ * album, not floating above everything.
+ *
+ * Anything not named here follows, in payload order — so a new API field still
+ * shows up without being added to this map.
+ */
+export interface FieldGroup {
+  title: string
+  keys: string[]
+}
+
+export const SECTION_GROUPS: Record<string, FieldGroup[]> = {
+  our_story: [
+    { title: 'A noiva', keys: ['bride'] },
+    { title: 'O noivo', keys: ['groom'] },
+    { title: 'Convite, entre os capítulos', keys: ['body'] },
+    { title: 'Momentos do álbum', keys: ['title', 'moments'] },
+    { title: 'As cartas', keys: ['letter_from_groom', 'letter_from_bride'] },
+    { title: 'O anúncio da Catarina', keys: ['announcement'] },
+  ],
+  hero: [{ title: 'Abertura', keys: ['couple_names', 'event_datetime', 'city_label', 'hero_image_url'] }],
+  big_day: [
+    { title: 'Textos', keys: ['title', 'body', 'venue_notes'] },
+    { title: 'Programação', keys: ['programme'] },
+  ],
+  getting_there: [
+    { title: 'Textos', keys: ['title', 'body', 'address', 'parking_notes'] },
+    { title: 'Mapas', keys: ['map_embed_url', 'maps_url', 'maps_logo_url', 'waze_url', 'waze_logo_url'] },
+  ],
+  stay: [
+    { title: 'Textos', keys: ['title', 'body'] },
+    { title: 'Hospedagens', keys: ['lodgings'] },
+  ],
+  dress_code: [
+    { title: 'Textos', keys: ['title', 'body', 'attire'] },
+    { title: 'Referências', keys: ['looks'] },
+  ],
+}

@@ -34,10 +34,25 @@ interface SitePreviewProps {
   draft: Draft
   /** Section to scroll to, so editing a section shows that section. */
   focusSlug?: string
+  /** A finer target inside the section — one album frame, say. */
+  focusAnchor?: string
+  /**
+   * When set, the site waits for a click on that photo and reports back where.
+   * Beats asking anyone to guess a percentage.
+   */
+  picking?: string
+  onPicked?: (x: number, y: number) => void
   className?: string
 }
 
-export function SitePreview({ draft, focusSlug, className = '' }: SitePreviewProps) {
+export function SitePreview({
+  draft,
+  focusSlug,
+  focusAnchor,
+  picking,
+  onPicked,
+  className = '',
+}: SitePreviewProps) {
   const frame = useRef<HTMLIFrameElement>(null)
   const [device, setDevice] = useState<Device>('desktop')
   const [ready, setReady] = useState(false)
@@ -49,10 +64,13 @@ export function SitePreview({ draft, focusSlug, className = '' }: SitePreviewPro
     const onMessage = (event: MessageEvent) => {
       if (event.source !== frame.current?.contentWindow) return
       if (event.data?.type === 'preview-ready') setReady(true)
+      if (event.data?.type === 'preview-picked' && typeof event.data.x === 'number') {
+        onPicked?.(event.data.x, event.data.y)
+      }
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
-  }, [])
+  }, [onPicked])
 
   useEffect(() => {
     if (!ready) return
@@ -60,9 +78,19 @@ export function SitePreview({ draft, focusSlug, className = '' }: SitePreviewPro
   }, [ready, draft])
 
   useEffect(() => {
-    if (!ready || !focusSlug) return
-    frame.current?.contentWindow?.postMessage({ type: 'preview-scroll', slug: focusSlug }, SITE_URL)
-  }, [ready, focusSlug])
+    if (!ready) return
+    const slug = focusAnchor || focusSlug
+    if (!slug) return
+    frame.current?.contentWindow?.postMessage({ type: 'preview-scroll', slug }, SITE_URL)
+  }, [ready, focusSlug, focusAnchor])
+
+  useEffect(() => {
+    if (!ready) return
+    frame.current?.contentWindow?.postMessage(
+      picking ? { type: 'preview-pick', target: picking } : { type: 'preview-pick-cancel' },
+      SITE_URL,
+    )
+  }, [ready, picking])
 
   return (
     <div className={`flex min-h-0 flex-col border border-olive-line bg-cream ${className}`}>
@@ -105,6 +133,12 @@ export function SitePreview({ draft, focusSlug, className = '' }: SitePreviewPro
           </button>
         </div>
       </header>
+
+      {picking ? (
+        <p className="border-b border-sand-line bg-gold-sand/25 px-3 py-2 font-body text-sm text-ink">
+          Clique no olho fechado da Catarina, na foto ao lado.
+        </p>
+      ) : null}
 
       <div className="flex min-h-0 flex-1 justify-center overflow-auto bg-veil p-3">
         <iframe

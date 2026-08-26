@@ -26,7 +26,11 @@ export function Shell({ children }: { children: ReactNode }) {
   const { email, leave } = useSession()
 
   return (
-    <div className="min-h-svh lg:grid lg:grid-cols-[15rem_1fr]">
+    // On a wide screen the shell owns the viewport and each screen scrolls
+    // inside `main`, so a screen that fits can decide not to scroll at all.
+    // Narrow, the page scrolls the ordinary way — a phone has no room for two
+    // panes side by side anyway.
+    <div className="min-h-svh lg:grid lg:h-svh lg:grid-cols-[15rem_1fr] lg:overflow-hidden">
       <aside className="border-b border-olive-line bg-cream lg:sticky lg:top-0 lg:h-svh lg:border-r lg:border-b-0">
         <div className="flex items-center gap-3 px-4 py-4">
           <img src={logo} alt="" aria-hidden="true" className="h-8 w-auto" />
@@ -66,7 +70,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </button>
       </aside>
 
-      <main className="min-w-0 px-4 py-6 sm:px-6">{children}</main>
+      <main className="min-w-0 px-4 py-6 sm:px-6 lg:min-h-0 lg:overflow-y-auto">{children}</main>
     </div>
   )
 }

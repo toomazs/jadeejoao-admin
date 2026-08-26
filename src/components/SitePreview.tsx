@@ -151,7 +151,7 @@ export function SitePreview({
           // mode; it refuses to accept a draft without both.
           src={`${SITE_URL}/?preview=1`}
           title="Preview do site"
-          className="h-full min-h-[36rem] border border-sand-line bg-cream"
+          className="h-full min-h-0 border border-sand-line bg-cream"
           style={{ width: DEVICES[device].width, maxWidth: '100%' }}
         />
       </div>

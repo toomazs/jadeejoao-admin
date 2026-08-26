@@ -53,7 +53,7 @@ export const FIELD_PT: Record<string, string> = {
   enabled: 'Seção visível no site',
 }
 
-/** The nine sections, in the order the site renders them (AD-8). */
+/** The sections, in the order the site renders them (AD-8). */
 export const SECTION_PT: Record<string, string> = {
   hero: 'Abertura',
   our_story: 'Nossa história',
@@ -63,7 +63,6 @@ export const SECTION_PT: Record<string, string> = {
   stay: 'Onde ficar',
   gifts_intro: 'Presentes',
   dress_code: 'Dress code',
-  good_practices: 'Boas práticas',
   messages_intro: 'Recado aos noivos',
 }
 

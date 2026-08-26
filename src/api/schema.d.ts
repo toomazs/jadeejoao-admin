@@ -1132,15 +1132,6 @@ export interface components {
             readonly $schema?: string;
             gifts: components["schemas"]["GiftView"][] | null;
         };
-        GoodPracticesPayload: {
-            /** @description Rich text as Markdown. */
-            body?: string;
-            /** @description Public CDN image URLs. */
-            images?: string[] | null;
-            rules?: string[] | null;
-            /** @description Section heading shown on the site. */
-            title: string;
-        };
         GroupDashboardView: {
             /** Format: uuid */
             group_id: string;
@@ -1598,7 +1589,6 @@ export interface components {
             enabled: boolean;
             getting_there?: components["schemas"]["GettingTherePayload"];
             gifts_intro?: components["schemas"]["GiftsIntroPayload"];
-            good_practices?: components["schemas"]["GoodPracticesPayload"];
             hero?: components["schemas"]["HeroPayload"];
             messages_intro?: components["schemas"]["MessagesIntroPayload"];
             our_story?: components["schemas"]["OurStoryPayload"];
@@ -1607,7 +1597,7 @@ export interface components {
              * @description Always present in responses; ignored in the section-update request body (the path decides).
              * @enum {string}
              */
-            slug?: "hero" | "our_story" | "big_day" | "rsvp" | "getting_there" | "stay" | "gifts_intro" | "dress_code" | "good_practices" | "messages_intro";
+            slug?: "hero" | "our_story" | "big_day" | "rsvp" | "getting_there" | "stay" | "gifts_intro" | "dress_code" | "messages_intro";
             stay?: components["schemas"]["StayPayload"];
         };
         SectionsOutputBody: {
@@ -2358,7 +2348,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                slug: "hero" | "our_story" | "big_day" | "rsvp" | "getting_there" | "stay" | "gifts_intro" | "dress_code" | "good_practices" | "messages_intro";
+                slug: "hero" | "our_story" | "big_day" | "rsvp" | "getting_there" | "stay" | "gifts_intro" | "dress_code" | "messages_intro";
             };
             cookie?: never;
         };

@@ -10,7 +10,7 @@ import {
 import { ScreenTitle } from "../components/Shell";
 import { SitePreview } from "../components/SitePreview";
 import type { Draft } from "../components/SitePreview";
-import { Button, Notice, SaveBar, shakeSaveBar, Toggle } from "../components/ui";
+import { Notice, SaveBar, shakeSaveBar, Tabs, Toggle } from "../components/ui";
 import { SECTION_PT } from "../lib/labels-fields";
 import { hasPendingImages, uploadPendingImages } from "../lib/uploads";
 
@@ -42,7 +42,8 @@ export function Content() {
   // rides along because re-opening the same one must scroll again, and a state
   // set to the value it already held changes nothing.
   const [anchor, setAnchor] = useState<{ id: string; n: number } | null>(null);
-  const focusOn = (id: string) => setAnchor((current) => ({ id, n: (current?.n ?? 0) + 1 }));
+  const focusOn = (id: string) =>
+    setAnchor((current) => ({ id, n: (current?.n ?? 0) + 1 }));
   const queryClient = useQueryClient();
 
   const sections = $api.useQuery("get", "/api/v1/admin/sections");
@@ -120,46 +121,48 @@ export function Content() {
   const payload = (draft?.[slug] ?? null) as never;
 
   return (
-    <>
-      <ScreenTitle
-        title="Conteúdo"
-        subtitle="Os textos e as fotos do site. O que você digitar aparece ao lado antes de salvar."
-        actions={
-          <>
-            <Notice kind="error">{error}</Notice>
-            <Notice kind="ok">{saved}</Notice>
-          </>
-        }
-      />
-
-      <div className="mb-4 flex flex-wrap gap-2">
-        {all.map((s) => (
-          <Button
-            key={s.slug}
-            tone={slug === s.slug ? "primary" : "quiet"}
-            onClick={() => {
-              if (s.slug === slug) return;
-              // Switching section throws the draft away — the effect above
-              // rebuilds it from the server copy — so while there is unsaved
-              // work the tabs do not switch at all. The bar shakes to point at
-              // itself, and it holds the two ways out: salvar or descartar.
-              // Nothing here is allowed to lose a sentence she just wrote by
-              // means of a misplaced click.
-              if (dirty && shakeSaveBar()) return;
-              // Drop the anchor with the section. It outlives the tab
-              // otherwise, and the preview prefers it over the section — so
-              // leaving "Nossa história" with an album frame open and clicking
-              // "Dress code" scrolled the site back up to that frame, every
-              // time, looking for all the world like the scroll was stuck.
-              setAnchor(null);
-              setSlug(s.slug);
-            }}
-          >
-            {SECTION_PT[s.slug] ?? s.slug}
-            {s.enabled === false ? " · oculta" : ""}
-          </Button>
-        ))}
+    // A column the height of the pane: the title and the tabs hold their
+    // place, and what is left goes to the two panes. Nothing here scrolls the
+    // page — the editor scrolls itself and the preview scrolls the site.
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0">
+        <ScreenTitle
+          title="Conteúdo"
+          subtitle="Os textos e as fotos do site. O que você digitar aparece ao lado antes de salvar."
+          actions={
+            <>
+              <Notice kind="error">{error}</Notice>
+              <Notice kind="ok">{saved}</Notice>
+            </>
+          }
+        />
       </div>
+
+      <Tabs
+        className="mb-3 shrink-0"
+        tabs={all.map((s) => ({
+          value: s.slug,
+          label: SECTION_PT[s.slug] ?? s.slug,
+          note: s.enabled === false ? "oculta" : undefined,
+        }))}
+        value={slug}
+        onChange={(next) => {
+          if (next === slug) return false;
+          // Switching section throws the draft away — the effect above
+          // rebuilds it from the server copy — so while there is unsaved work
+          // the tabs do not switch at all. The bar shakes to point at itself,
+          // and it holds the two ways out: salvar or descartar. Nothing here
+          // is allowed to lose a sentence she just wrote to a stray click.
+          if (dirty && shakeSaveBar()) return false;
+          // Drop the anchor with the section. It outlives the tab otherwise,
+          // and the preview prefers it over the section — so leaving "Nossa
+          // história" with an album frame open and clicking "Dress code"
+          // scrolled the site back up to that frame, every time, looking for
+          // all the world like the scroll was stuck.
+          setAnchor(null);
+          setSlug(next);
+        }}
+      />
 
       <FocusContext value={focusOn}>
         <PickContext
@@ -172,8 +175,8 @@ export function Content() {
             cancel: () => setPicking(null),
           }}
         >
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,26rem)_1fr]">
-            <div className="min-w-0 border border-olive-line bg-cream px-4 py-4">
+          <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,26rem)_1fr]">
+            <div className="min-w-0 overflow-y-auto border border-olive-line bg-cream px-4 py-4">
               {draft ? (
                 <>
                   <div className="border-b border-sand-line pb-3">
@@ -205,13 +208,13 @@ export function Content() {
               draft={previewDraft}
               focusSlug={slug}
               focusAnchor={anchor?.id}
-          focusNonce={anchor?.n}
+              focusNonce={anchor?.n}
               picking={picking ?? undefined}
               onPicked={(x, y) => {
                 pickHandler.current?.(x, y);
                 setPicking(null);
               }}
-              className="min-h-[36rem] xl:sticky xl:top-4 xl:h-[calc(100svh-2rem)]"
+              className="min-h-[24rem] xl:min-h-0"
             />
           </div>
         </PickContext>
@@ -224,6 +227,6 @@ export function Content() {
         onSave={() => void submit()}
         onReset={() => stored && setDraft(structuredClone(stored))}
       />
-    </>
+    </div>
   );
 }

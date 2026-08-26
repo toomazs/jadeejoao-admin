@@ -149,7 +149,15 @@ export function Content() {
           <Button
             key={s.slug}
             tone={slug === s.slug ? "primary" : "quiet"}
-            onClick={() => setSlug(s.slug)}
+            onClick={() => {
+              // Drop the anchor with the section. It outlives the tab
+              // otherwise, and the preview prefers it over the section — so
+              // leaving "Nossa história" with an album frame open and clicking
+              // "Dress code" scrolled the site back up to that frame, every
+              // time, looking for all the world like the scroll was stuck.
+              setAnchor(null);
+              setSlug(s.slug);
+            }}
           >
             {SECTION_PT[s.slug] ?? s.slug}
             {s.enabled === false ? " · oculta" : ""}

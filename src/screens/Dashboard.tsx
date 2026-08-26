@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { $api } from '../api/client'
 import { ScreenTitle } from '../components/Shell'
 import { Card, Empty, Stat } from '../components/ui'
-import { CATEGORY_PT } from '../lib/labels'
+import { CATEGORY_PT, money } from '../lib/labels'
 
 /**
  * What the couple wants to know at a glance: how many are coming, who is still
@@ -18,7 +18,7 @@ export function Dashboard() {
   const contributions = $api.useQuery('get', '/api/v1/admin/contributions')
 
   const counts = guests.data?.headcounts
-  const pendingMessages = (messages.data?.messages ?? []).filter((m) => m.status === 'pending')
+  const allMessages = messages.data?.messages ?? []
   const declared = (contributions.data?.contributions ?? []).filter((c) => c.status === 'declared')
   const byCategory = Object.entries(counts?.yes_by_category ?? {}).filter(([, n]) => n > 0)
 
@@ -48,18 +48,18 @@ export function Dashboard() {
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <Card
-          title="Recados esperando"
+          title="Últimos recados"
           actions={
             <Link to="/recados" className="font-body text-sm text-olive underline underline-offset-4">
               ver todos
             </Link>
           }
         >
-          {pendingMessages.length === 0 ? (
-            <Empty>Nenhum recado esperando moderação.</Empty>
+          {allMessages.length === 0 ? (
+            <Empty>Ninguém escreveu ainda.</Empty>
           ) : (
             <ul className="divide-y divide-sand-line">
-              {pendingMessages.slice(0, 4).map((m) => (
+              {allMessages.slice(0, 4).map((m) => (
                 <li key={m.message_id} className="px-4 py-3">
                   <p className="font-body text-sm text-olive">{m.author_name}</p>
                   <p className="mt-0.5 line-clamp-2 font-body text-sm text-dark-gray">{m.body}</p>
@@ -85,10 +85,7 @@ export function Dashboard() {
                 <li key={c.contribution_id} className="flex items-center justify-between gap-3 px-4 py-3">
                   <span className="font-body text-sm text-dark-gray">{c.contributor_name}</span>
                   <span className="font-body text-sm text-ink">
-                    {(c.amount_centavos / 100).toLocaleString('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL',
-                    })}
+                    {money(c.amount_centavos)}
                   </span>
                 </li>
               ))}

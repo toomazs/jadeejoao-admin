@@ -10,6 +10,8 @@ import {
 import { ScreenTitle } from "../components/Shell";
 import { ChapterPhotos, GalleryContext } from "../components/ChapterPhotos";
 import type { ChapterPhoto } from "../components/ChapterPhotos";
+import { GiftList, GiftsContext, giftBody, isNew } from "../components/GiftList";
+import type { Gift } from "../components/GiftList";
 import { SitePreview } from "../components/SitePreview";
 import type { Draft } from "../components/SitePreview";
 import { Notice, SaveBar, shakeSaveBar, Tabs, Toggle } from "../components/ui";
@@ -65,6 +67,24 @@ export function Content() {
     "/api/v1/admin/instagram/{person}",
   );
 
+  // The gift list, likewise: records of its own, edited inside the Presentes
+  // section because that is the one block of the page it is.
+  const giftsQuery = $api.useQuery("get", "/api/v1/admin/gifts");
+  const createGift = $api.useMutation("post", "/api/v1/admin/gifts");
+  const updateGift = $api.useMutation("put", "/api/v1/admin/gifts/{gift_id}");
+  const deleteGift = $api.useMutation(
+    "delete",
+    "/api/v1/admin/gifts/{gift_id}",
+  );
+  const storedGifts = useMemo(
+    () => (giftsQuery.data?.gifts ?? []) as Gift[],
+    [giftsQuery.data],
+  );
+  const [gifts, setGifts] = useState<Gift[] | null>(null);
+  useEffect(() => {
+    setGifts(structuredClone(storedGifts));
+  }, [storedGifts]);
+
   const storedGalleries = useMemo(
     () => ({
       bride: (bride.data?.posts ?? []) as ChapterPhoto[],
@@ -102,8 +122,12 @@ export function Content() {
    */
   const previewDraft: Draft = useMemo(() => {
     const merged = all.map((s) => (s.slug === slug && draft ? draft : s));
-    return { content: { sections: merged.filter((s) => s.enabled !== false) } };
-  }, [all, slug, draft]);
+    return {
+      content: { sections: merged.filter((s) => s.enabled !== false) },
+      // The unsaved gift list too — it is what the Presentes section draws.
+      gifts: { gifts: (gifts ?? storedGifts).filter((g) => g.active !== false) },
+    };
+  }, [all, slug, draft, gifts, storedGifts]);
 
   const dirtyGalleries = galleries
     ? (["bride", "groom"] as const).filter(
@@ -112,10 +136,15 @@ export function Content() {
           JSON.stringify(storedGalleries[who]),
       )
     : [];
+  const dirtyGifts = gifts
+    ? JSON.stringify(gifts) !== JSON.stringify(storedGifts)
+    : false;
   const dirty =
     (draft && stored
       ? JSON.stringify(draft) !== JSON.stringify(stored)
-      : false) || dirtyGalleries.length > 0;
+      : false) ||
+    dirtyGalleries.length > 0 ||
+    dirtyGifts;
 
   const submit = async () => {
     if (!draft || !dirty || uploading) return;
@@ -166,6 +195,39 @@ export function Content() {
         return;
       }
       setUploading(false);
+    }
+
+    // The gift list: create what is new, update what changed, delete what the
+    // couple took out. Diffed by id rather than sent whole, because these are
+    // records with contributions counted against them — there is no endpoint
+    // that would take the list in one piece, and there should not be.
+    if (gifts && dirtyGifts) {
+      try {
+        const kept = new Set(gifts.map((g) => g.gift_id));
+        for (const old of storedGifts) {
+          if (old.gift_id && !kept.has(old.gift_id)) {
+            await deleteGift.mutateAsync({
+              params: { path: { gift_id: old.gift_id } },
+            });
+          }
+        }
+        for (const gift of gifts) {
+          const body = giftBody(gift);
+          if (isNew(gift)) {
+            await createGift.mutateAsync({ body: body as never });
+            continue;
+          }
+          const before = storedGifts.find((g) => g.gift_id === gift.gift_id);
+          if (JSON.stringify(before) === JSON.stringify(gift)) continue;
+          await updateGift.mutateAsync({
+            params: { path: { gift_id: gift.gift_id as string } },
+            body: body as never,
+          });
+        }
+      } catch (err) {
+        setError(problemDetail(err, "Não conseguimos salvar os presentes."));
+        return;
+      }
     }
 
     // A section may be untouched while a gallery is not — the bar covers both,
@@ -239,6 +301,11 @@ export function Content() {
         }}
       />
 
+      <GiftsContext
+        value={() =>
+          gifts ? <GiftList gifts={gifts} onChange={setGifts} /> : null
+        }
+      >
       <GalleryContext
         value={(person) =>
           galleries ? (
@@ -309,6 +376,7 @@ export function Content() {
           </PickContext>
         </FocusContext>
       </GalleryContext>
+      </GiftsContext>
 
       <SaveBar
         visible={dirty}
@@ -318,6 +386,7 @@ export function Content() {
         onReset={() => {
           if (stored) setDraft(structuredClone(stored));
           setGalleries(structuredClone(storedGalleries));
+          setGifts(structuredClone(storedGifts));
         }}
       />
     </div>

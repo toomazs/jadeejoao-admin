@@ -1,120 +1,57 @@
-import { useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
-
-import { $api, problemDetail } from '../api/client'
+import { $api } from '../api/client'
 import { ScreenTitle } from '../components/Shell'
-import { Button, Card, Chip, Empty, Notice } from '../components/ui'
-import type { ChipTone } from '../components/ui'
-import { MESSAGE_STATUS_PT, shortDate } from '../lib/labels'
-
-const MSG_TONE: Record<string, ChipTone> = {
-  approved: 'yes',
-  rejected: 'no',
-  pending: 'waiting',
-}
-
-type Filter = 'pending' | 'approved' | 'rejected' | 'all'
-
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: 'pending', label: 'Esperando' },
-  { key: 'approved', label: 'Aprovados' },
-  { key: 'rejected', label: 'Rejeitados' },
-  { key: 'all', label: 'Todos' },
-]
+import { Empty, SkeletonRows } from '../components/ui'
+import { shortDate } from '../lib/labels'
 
 /**
  * The guestbook, which is write-only for guests (AD-14): they leave a recado
- * and the couple reads it here.
+ * and only the couple ever reads it.
  *
- * Moderation exists so a public wall could be added later without rewriting
- * anything — approving today changes nothing a guest sees, and that is fine.
+ * There is nothing to do here, and that is the design. Approving and rejecting
+ * used to sit under every message — deciding what would appear somewhere no
+ * message appears, asking the couple to pass judgement on things written for
+ * them in order to change nothing. Five had arrived and none had ever been
+ * touched.
  */
 export function Messages() {
-  const [filter, setFilter] = useState<Filter>('pending')
-  const [error, setError] = useState('')
-  const queryClient = useQueryClient()
-
   const messages = $api.useQuery('get', '/api/v1/admin/messages')
-  const moderate = $api.useMutation('patch', '/api/v1/admin/messages/{message_id}')
-
   const all = messages.data?.messages ?? []
-  const shown = filter === 'all' ? all : all.filter((m) => m.status === filter)
-  const waiting = all.filter((m) => m.status === 'pending').length
-
-  const decide = (id: string, status: 'approved' | 'rejected') => {
-    setError('')
-    moderate.mutate(
-      { params: { path: { message_id: id } }, body: { status } },
-      {
-        onSuccess: () => void queryClient.invalidateQueries(),
-        onError: (err) => setError(problemDetail(err)),
-      },
-    )
-  }
 
   return (
     <>
       <ScreenTitle
         title="Recados"
         subtitle={
-          waiting > 0
-            ? `${waiting} esperando vocês · ${all.length} no total`
-            : `${all.length} recados, nenhum esperando`
+          all.length === 1
+            ? '1 recado que deixaram para vocês.'
+            : `${all.length} recados que deixaram para vocês.`
         }
       />
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        {FILTERS.map(({ key, label }) => (
-          <Button
-            key={key}
-            tone={filter === key ? 'primary' : 'quiet'}
-            onClick={() => setFilter(key)}
-          >
-            {label}
-          </Button>
-        ))}
-      </div>
-
-      <Notice kind="error">{error}</Notice>
-
-      <Card className="mt-2">
-        {messages.isPending ? (
-          <Empty>·</Empty>
-        ) : shown.length === 0 ? (
-          <Empty>Nenhum recado aqui.</Empty>
-        ) : (
-          <ul className="divide-y divide-sand-line">
-            {shown.map((m) => (
-              <li key={m.message_id} className="row-in px-4 py-4">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="font-display text-lg text-olive">{m.author_name}</p>
-                  <p className="flex items-center gap-2 font-body text-xs text-dark-gray">
-                    {shortDate(m.created_at)}
-                    <Chip tone={MSG_TONE[m.status] ?? 'neutral'}>
-                      {MESSAGE_STATUS_PT[m.status] ?? m.status}
-                    </Chip>
-                  </p>
-                </div>
-                {/* Guests write with line breaks and they carry meaning. */}
-                <p className="mt-2 font-body text-base whitespace-pre-line text-ink">{m.body}</p>
-
-                {/* Only the transitions that would change something. A recado
-                    already approved shows just the way back. */}
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {m.status !== 'approved' ? (
-                    <Button onClick={() => decide(m.message_id, 'approved')}>Aprovar</Button>
-                  ) : null}
-                  {m.status !== 'rejected' ? (
-                    <Button tone="danger" onClick={() => decide(m.message_id, 'rejected')}>
-                      Rejeitar
-                    </Button>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      {messages.isPending ? (
+        <SkeletonRows rows={3} />
+      ) : all.length === 0 ? (
+        <Empty>Ninguém escreveu ainda.</Empty>
+      ) : (
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {all.map((message) => (
+            <li
+              key={message.message_id}
+              // Cards of a height, so a short recado does not read as less of
+              // one than a long one.
+              className="flex min-h-44 flex-col border border-olive-line bg-cream px-5 py-4"
+            >
+              <p className="font-display text-lg text-olive">{message.author_name}</p>
+              <p className="mt-2 flex-1 font-body text-base leading-relaxed whitespace-pre-line text-ink">
+                {message.body}
+              </p>
+              <p className="mt-3 font-body text-xs tracking-[0.1em] text-dark-gray uppercase">
+                {shortDate(message.created_at)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
     </>
   )
 }

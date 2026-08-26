@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from "lucide-react";
 
 import { ChapterPhotosSlot } from "./ChapterPhotos";
+import { GiftListSlot } from "./GiftList";
 import { DateTimeField, ImageField } from "./fields";
 import { createContext, use } from "react";
 
@@ -273,6 +274,15 @@ export function PayloadEditor({
             </Accordion>
           );
         })}
+        {/* The gifts are records of their own, not payload — but they are one
+            block of this section on the page, so they are edited beside its
+            text and saved by the same bar. */}
+        {path === "gifts_intro" ? (
+          <Accordion title="Lista de presentes">
+            <GiftListSlot />
+          </Accordion>
+        ) : null}
+
         {/* Anything the map does not mention still appears, so a new API field
             is never silently uneditable. */}
         {entries.filter(([k]) => !claimed.has(k)).length > 0 ? (

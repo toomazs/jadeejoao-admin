@@ -302,7 +302,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List guestbook messages */
+        /**
+         * List guestbook messages
+         * @description Every message, newest first. There is nothing to filter by: the guestbook is write-only in public (AD-14), so a message is never shown to anyone but them.
+         */
         get: operations["admin-list-messages"];
         put?: never;
         post?: never;
@@ -310,26 +313,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/messages/{message_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Approve or reject a message
-         * @description Moderation exists so a future public guestbook wall is purely additive (AD-14).
-         */
-        patch: operations["admin-moderate-message"];
         trace?: never;
     };
     "/api/v1/admin/password": {
@@ -623,7 +606,7 @@ export interface paths {
         put?: never;
         /**
          * Leave a message for the couple
-         * @description Creates a pending guestbook message (Recado aos noivos). Publicly write-only: messages are read and moderated in the admin.
+         * @description Creates a pending guestbook message (Recado aos noivos). Publicly write-only: the site never shows a message back, and the couple reads them in the panel.
          */
         post: operations["create-message"];
         delete?: never;
@@ -1373,11 +1356,6 @@ export interface components {
             readonly $schema?: string;
             /** Format: uuid */
             message_id: string;
-            /**
-             * @description New messages always start pending; the couple moderates them in the admin.
-             * @enum {string}
-             */
-            status: "pending" | "approved" | "rejected";
         };
         MessageInputBody: {
             /**
@@ -1397,12 +1375,6 @@ export interface components {
             group_id?: string;
         };
         MessageView: {
-            /**
-             * Format: uri
-             * @description A URL to the JSON Schema for this object.
-             * @example https://example.com/schemas/MessageView.json
-             */
-            readonly $schema?: string;
             author_name: string;
             body: string;
             /** Format: date-time */
@@ -1411,8 +1383,6 @@ export interface components {
             group_id?: string;
             /** Format: uuid */
             message_id: string;
-            /** @enum {string} */
-            status: "pending" | "approved" | "rejected";
         };
         MessagesIntroPayload: {
             /** @description Rich text as Markdown. */
@@ -1443,16 +1413,6 @@ export interface components {
              * @enum {string}
              */
             status: "confirmed" | "cancelled";
-        };
-        ModerateMessageInputBody: {
-            /**
-             * Format: uri
-             * @description A URL to the JSON Schema for this object.
-             * @example https://example.com/schemas/ModerateMessageInputBody.json
-             */
-            readonly $schema?: string;
-            /** @enum {string} */
-            status: "approved" | "rejected";
         };
         OkOutputBody: {
             /**
@@ -2326,10 +2286,7 @@ export interface operations {
     };
     "admin-list-messages": {
         parameters: {
-            query?: {
-                /** @description Filter by status; omit for all. */
-                status?: "pending" | "approved" | "rejected";
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -2343,41 +2300,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MessagesOutputBody"];
-                };
-            };
-            /** @description Error */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ErrorModel"];
-                };
-            };
-        };
-    };
-    "admin-moderate-message": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                message_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ModerateMessageInputBody"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MessageView"];
                 };
             };
             /** @description Error */

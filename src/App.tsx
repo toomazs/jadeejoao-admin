@@ -6,7 +6,6 @@ import { ChangePassword } from './screens/ChangePassword'
 import { Contributions } from './screens/Contributions'
 import { Content } from './screens/Content'
 import { Dashboard } from './screens/Dashboard'
-import { Gifts } from './screens/Gifts'
 import { Guests } from './screens/Guests'
 import { Login } from './screens/Login'
 import { Messages } from './screens/Messages'
@@ -33,7 +32,6 @@ export function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/convidados" element={<Guests />} />
         <Route path="/recados" element={<Messages />} />
-        <Route path="/presentes" element={<Gifts />} />
         <Route path="/contribuicoes" element={<Contributions />} />
         <Route path="/conteudo" element={<Content />} />
         <Route path="*" element={<Dashboard />} />

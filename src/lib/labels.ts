@@ -43,12 +43,6 @@ export const GENDER_PT: Record<string, string> = {
 
 export const GENDERS = ['female', 'male'] as const
 
-export const MESSAGE_STATUS_PT: Record<string, string> = {
-  pending: 'Esperando',
-  approved: 'Aprovado',
-  rejected: 'Rejeitado',
-}
-
 export const CONTRIBUTION_STATUS_PT: Record<string, string> = {
   declared: 'Declarado',
   confirmed: 'Confirmado',

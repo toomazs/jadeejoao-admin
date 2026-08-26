@@ -108,7 +108,11 @@ export const SECTION_GROUPS: Record<string, FieldGroup[]> = {
     { title: 'Programação', keys: ['programme'] },
   ],
   getting_there: [
-    { title: 'Textos', keys: ['title', 'body', 'address', 'parking_notes'], open: true },
+    // The address leads on the page, in large olive type above the
+    // sentence — so it leads here too. The panel reading in one order while
+    // the preview beside it reads in another is the panel arguing with
+    // itself.
+    { title: 'Textos', keys: ['title', 'address', 'body', 'parking_notes'], open: true },
     { title: 'Mapas', keys: ['map_embed_url', 'maps_url', 'maps_logo_url', 'waze_url', 'waze_logo_url'] },
   ],
   stay: [

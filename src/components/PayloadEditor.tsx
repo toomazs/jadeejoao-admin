@@ -1,8 +1,7 @@
-import { ChevronDown, Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { Plus, Trash2 } from 'lucide-react'
 
 import { DateTimeField, ImageField } from './fields'
-import { Checkbox, DateField } from './ui'
+import { Accordion, Checkbox, DateField } from './ui'
 import { FIELD_PT } from '../lib/labels-fields'
 
 /**
@@ -124,22 +123,61 @@ export function PayloadEditor({ value, onChange, path = '', onSave, saving }: Ed
 
   return (
     <div className="grid gap-3">
-      {Object.entries(value).map(([key, child]) => (
-        <label key={key} className="block">
-          <span className="font-body text-xs tracking-[0.1em] text-dark-gray uppercase">
-            {humanize(key)}
-          </span>
+      {Object.entries(value).map(([key, child]) => {
+        const childPath = path ? `${path}.${key}` : key
+        const editor = (
           <PayloadEditor
             value={child}
-            path={path ? `${path}.${key}` : key}
+            path={childPath}
             onChange={(next) => onChange({ ...value, [key]: next })}
             onSave={onSave}
             saving={saving}
           />
-        </label>
-      ))}
+        )
+
+        // Anything with an inside of its own folds away: the bride's chapter is
+        // a name, a bio, a portrait and a letter, and flattened it buries the
+        // shape of the section under one long column.
+        if (child && typeof child === 'object') {
+          return (
+            <Accordion key={key} title={humanize(key)} subtitle={summarize(child)}>
+              {editor}
+            </Accordion>
+          )
+        }
+
+        // A plain field labels itself. Deliberately NOT a <label> wrapping the
+        // whole thing: some of these render as a group of buttons, and a label
+        // around them makes clicking the caption open the first one.
+        return (
+          <div key={key}>
+            <span className="block font-body text-xs tracking-[0.1em] text-dark-gray uppercase">
+              {humanize(key)}
+            </span>
+            {editor}
+          </div>
+        )
+      })}
     </div>
   )
+}
+
+/** A one-line hint of what is folded away, so a closed row still says something. */
+function summarize(value: Json): string {
+  if (Array.isArray(value)) {
+    return value.length === 1 ? '1 item' : `${value.length} itens`
+  }
+  if (value && typeof value === 'object') {
+    for (const key of ['name', 'title', 'label']) {
+      const v = value[key]
+      if (typeof v === 'string' && v) return v
+    }
+    const filled = Object.values(value).filter(
+      (v) => v !== '' && v !== null && v !== undefined,
+    ).length
+    return filled === 1 ? '1 campo' : `${filled} campos`
+  }
+  return ''
 }
 
 /**
@@ -160,8 +198,6 @@ function ArrayEditor({
   onSave?: () => void
   saving?: boolean
 }) {
-  const [open, setOpen] = useState<number | null>(items.length === 1 ? 0 : null)
-
   const blankLike = (sample: Json | undefined): Json => {
     if (sample === undefined) return ''
     if (Array.isArray(sample)) return []
@@ -189,57 +225,43 @@ function ArrayEditor({
   return (
     <div className="mt-1 grid gap-2">
       {items.map((item, index) => (
-        <div key={index} className="border border-olive-line bg-veil">
-          <div className="flex items-center justify-between gap-2 px-3 py-2">
-            <button
-              type="button"
-              onClick={() => setOpen(open === index ? null : index)}
-              className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left font-body text-sm text-ink"
-            >
-              <ChevronDown
-                className={`h-4 w-4 shrink-0 transition-transform ${open === index ? '' : '-rotate-90'}`}
-                aria-hidden="true"
-              />
-              <span className="truncate">{title(item, index)}</span>
-            </button>
+        <Accordion
+          key={index}
+          title={title(item, index)}
+          right={
             <button
               type="button"
               aria-label={`Remover ${title(item, index)}`}
               onClick={() => onChange(items.filter((_, i) => i !== index))}
-              className="shrink-0 cursor-pointer text-dark-gray/60 transition-colors hover:text-terracotta"
+              className="cursor-pointer p-1 text-dark-gray/60 transition-colors hover:text-terracotta"
             >
               <Trash2 className="h-4 w-4" aria-hidden="true" />
             </button>
-          </div>
-          {open === index ? (
-            <div className="border-t border-sand-line px-3 py-3">
-              <PayloadEditor
-                value={item}
-                path={path}
-                onChange={(next) => onChange(items.map((old, i) => (i === index ? next : old)))}
-              />
-              {onSave ? (
-                <button
-                  type="button"
-                  onClick={onSave}
-                  disabled={saving}
-                  className="mt-3 min-h-9 cursor-pointer border border-olive bg-olive px-4 font-body text-sm text-cream transition-colors hover:bg-deep-olive disabled:opacity-40"
-                >
-                  {saving ? 'Salvando…' : 'Salvar'}
-                </button>
-              ) : null}
-            </div>
+          }
+          defaultOpen={items.length === 1}
+        >
+          <PayloadEditor
+            value={item}
+            path={path}
+            onChange={(next) => onChange(items.map((old, i) => (i === index ? next : old)))}
+          />
+          {onSave ? (
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={saving}
+              className="mt-3 min-h-9 cursor-pointer border border-olive bg-olive px-4 font-body text-sm text-cream transition-colors hover:bg-deep-olive disabled:opacity-40"
+            >
+              {saving ? 'Salvando…' : 'Salvar'}
+            </button>
           ) : null}
-        </div>
+        </Accordion>
       ))}
 
       <button
         type="button"
-        onClick={() => {
-          onChange([...items, blankLike(items[0])])
-          setOpen(items.length)
-        }}
-        className="flex min-h-9 cursor-pointer items-center justify-center gap-2 border border-dashed border-olive-line font-body text-sm text-dark-gray transition-colors hover:border-olive hover:text-olive"
+        onClick={() => onChange([...items, blankLike(items[0])])}
+        className="flex min-h-10 cursor-pointer items-center justify-center gap-2 border border-dashed border-olive-line font-body text-sm text-dark-gray transition-colors hover:border-olive hover:text-olive"
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
         Adicionar

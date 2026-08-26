@@ -10,6 +10,7 @@ export { Button, Field, Card, Panel, Stat, Notice, SkeletonRows, Empty } from '.
 export { Chip, Toggle, Checkbox, Select, Slider, SearchField } from './controls'
 export type { ChipTone, Option } from './controls'
 export { Modal, ConfirmModal } from './Modal'
+export { Accordion } from './Accordion'
 export { DateField, TimeField, formatLongDate } from './DateTime'
 export { DataTable } from './DataTable'
 export type { Column } from './DataTable'

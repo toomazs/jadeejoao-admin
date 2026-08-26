@@ -8,6 +8,7 @@ import { SitePreview } from '../components/SitePreview'
 import type { Draft } from '../components/SitePreview'
 import { Button, Notice, Toggle } from '../components/ui'
 import { SECTION_PT } from '../lib/labels-fields'
+import { hasPendingImages, uploadPendingImages } from '../lib/uploads'
 
 type Section = Record<string, unknown> & { slug: string; enabled?: boolean }
 
@@ -27,6 +28,7 @@ export function Content() {
   const [draft, setDraft] = useState<Section | null>(null)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState('')
+  const [uploading, setUploading] = useState(false)
   const queryClient = useQueryClient()
 
   const sections = $api.useQuery('get', '/api/v1/admin/sections')
@@ -55,13 +57,32 @@ export function Content() {
 
   const dirty = draft && stored ? JSON.stringify(draft) !== JSON.stringify(stored) : false
 
-  const submit = () => {
-    if (!draft || !dirty) return
+  const submit = async () => {
+    if (!draft || !dirty || uploading) return
     setError('')
     setSaved('')
+
+    // Photos picked in the panel ride in the draft as data URLs so the preview
+    // can show them unsaved. They become real files here, on the way out —
+    // saving base64 into the payload would put a megabyte of JSON in Postgres
+    // and serve it to every guest.
+    let payload = draft
+    if (hasPendingImages(draft)) {
+      setUploading(true)
+      try {
+        payload = await uploadPendingImages(draft, slug)
+        setDraft(payload)
+      } catch (err) {
+        setUploading(false)
+        setError(err instanceof Error ? err.message : 'Não conseguimos enviar a foto.')
+        return
+      }
+      setUploading(false)
+    }
+
     save.mutate(
       // The path decides the slug; the API ignores the one in the body.
-      { params: { path: { slug: slug as never } }, body: draft as never },
+      { params: { path: { slug: slug as never } }, body: payload as never },
       {
         onSuccess: () => {
           setSaved('Salvo. O site já está com essa versão.')
@@ -86,8 +107,14 @@ export function Content() {
           <>
             <Notice kind="error">{error}</Notice>
             <Notice kind="ok">{saved}</Notice>
-            <Button onClick={submit} disabled={!dirty || save.isPending}>
-              {save.isPending ? 'Salvando…' : dirty ? 'Salvar' : 'Sem alterações'}
+            <Button onClick={() => void submit()} disabled={!dirty || save.isPending || uploading}>
+              {uploading
+                ? 'Enviando a foto…'
+                : save.isPending
+                  ? 'Salvando…'
+                  : dirty
+                    ? 'Salvar'
+                    : 'Sem alterações'}
             </Button>
           </>
         }
@@ -119,8 +146,8 @@ export function Content() {
                   value={payload}
                   path={slug}
                   onChange={(next) => setDraft({ ...draft, [slug]: next as never })}
-                  onSave={submit}
-                  saving={save.isPending}
+                  onSave={() => void submit()}
+                  saving={save.isPending || uploading}
                 />
               </div>
             </>

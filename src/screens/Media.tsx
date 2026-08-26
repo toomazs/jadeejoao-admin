@@ -36,6 +36,9 @@ export function Media() {
       const { data } = await supabase.auth.getSession()
       const form = new FormData()
       form.append('file', file)
+      // The file name is a poor description, but it is what the couple chose
+      // and it beats an empty string in a screen reader.
+      form.append('alt', file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '))
       const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/admin/media`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${data.session?.access_token ?? ''}` },

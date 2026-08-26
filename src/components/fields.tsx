@@ -81,15 +81,30 @@ export function ImageField({
 
   return (
     <div className="mt-1">
+      {/* The photo is the obvious thing to click, so it is the button — the
+          one below is for people who do not think to try. */}
       {value ? (
         <div className="relative inline-block">
-          <img
-            src={value}
-            alt=""
-            className="h-24 w-auto max-w-full border border-sand-line object-cover"
-          />
+          <button
+            type="button"
+            onClick={() => input.current?.click()}
+            aria-label="Trocar a foto"
+            className="group relative block cursor-pointer overflow-hidden border border-sand-line transition-colors hover:border-olive"
+          >
+            <img
+              src={value}
+              alt=""
+              className="h-24 w-auto max-w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+            <span className="absolute inset-0 grid place-items-center bg-ink/55 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+              <span className="flex items-center gap-1.5 font-body text-sm text-cream">
+                <ImageUp className="h-4 w-4" aria-hidden="true" />
+                trocar
+              </span>
+            </span>
+          </button>
           {pending ? (
-            <span className="absolute -top-2 -right-2 border border-gold-sand bg-cream px-1.5 font-body text-xs text-olive">
+            <span className="pointer-events-none absolute -top-2 -right-2 border border-gold-sand bg-cream px-1.5 font-body text-xs text-olive">
               não salva
             </span>
           ) : null}

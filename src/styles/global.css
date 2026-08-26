@@ -79,6 +79,43 @@
 }
 
 /*
+ * The scrollbars, in the panel's own colours.
+ *
+ * The default one is a grey slab of operating-system chrome, and it shows up
+ * in every textarea and every scrolling list — enough of them that the panel
+ * ends up looking like it borrowed its frame from somewhere else. Thin track,
+ * olive thumb, square like everything else here.
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--olive-line) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--olive-line);
+  /* Inset by a border so the thumb reads as a bar inside a gutter rather
+     than a block jammed against the content. */
+  border: 3px solid var(--veil);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--olive);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/*
  * Afrah is a hairline display face: at screen resolutions its thinnest joins
  * drop out and titles read broken. The same fraction of a pixel of stroke the
  * site uses, in the text's own colour — the bold weight is far too heavy for

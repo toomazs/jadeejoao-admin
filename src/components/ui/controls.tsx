@@ -1,5 +1,6 @@
 import { Check, ChevronDown } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 
 /**
@@ -159,7 +160,13 @@ export function Select({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [query, setQuery] = useState("");
+  const [spot, setSpot] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
   const wrapper = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
   const listId = useId();
   const chosen = options.find((o) => o.value === value);
 
@@ -172,10 +179,43 @@ export function Select({
       ? options.filter((o) => fold(o.label).includes(fold(query.trim())))
       : options;
 
+  // Where the list goes, measured from the field. It lives in a portal now, so
+  // it has no parent to be positioned against — and, the whole point, no parent
+  // to be clipped by: inside a modal, whose body scrolls, an absolutely
+  // positioned list was cut off at the edge of the sheet.
+  useEffect(() => {
+    if (!open) {
+      setSpot(null);
+      return;
+    }
+    const place = () => {
+      const rect = wrapper.current?.getBoundingClientRect();
+      if (!rect) return;
+      const below = window.innerHeight - rect.bottom;
+      setSpot({
+        // Opens upwards when the field sits near the bottom of the window and
+        // there is more room above it.
+        top: below < 220 && rect.top > below ? rect.top - 292 : rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+      });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const onDocClick = (event: MouseEvent) => {
-      if (!wrapper.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (wrapper.current?.contains(target) || panel.current?.contains(target))
+        return;
+      setOpen(false);
     };
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
@@ -248,52 +288,63 @@ export function Select({
         />
       </button>
 
-      {open ? (
-        <div className="absolute inset-x-0 z-20 mt-1 border border-olive-line bg-cream shadow-[0_18px_40px_-24px_rgba(26,24,24,0.6)]">
-          {searchable ? (
-            <div className="border-b border-sand-line p-1.5">
-              <input
-                autoFocus
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setActive(0);
-                }}
-                placeholder="Buscar…"
-                className="min-h-9 w-full border border-olive-line bg-cream px-2.5 font-body text-sm text-ink placeholder:text-dark-gray/45 focus:border-olive focus:outline-none"
-              />
-            </div>
-          ) : null}
+      {open && spot
+        ? createPortal(
+            <div
+              ref={panel}
+              style={{ top: spot.top, left: spot.left, width: spot.width }}
+              className="fixed z-50 border border-olive-line bg-cream shadow-[0_18px_40px_-24px_rgba(26,24,24,0.6)]"
+            >
+              {searchable ? (
+                <div className="border-b border-sand-line p-1.5">
+                  <input
+                    autoFocus
+                    value={query}
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                      setActive(0);
+                    }}
+                    placeholder="Buscar…"
+                    className="min-h-9 w-full border border-olive-line bg-cream px-2.5 font-body text-sm text-ink placeholder:text-dark-gray/45 focus:border-olive focus:outline-none"
+                  />
+                </div>
+              ) : null}
 
-          {shown.length === 0 ? (
-            <p className="px-3 py-3 font-body text-sm text-dark-gray italic">
-              nada com esse nome
-            </p>
-          ) : null}
+              {shown.length === 0 ? (
+                <p className="px-3 py-3 font-body text-sm text-dark-gray italic">
+                  nada com esse nome
+                </p>
+              ) : null}
 
-          <ul id={listId} role="listbox" className="max-h-60 overflow-y-auto">
-            {shown.map((option, index) => (
-              <li key={option.value}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={option.value === value}
-                  onMouseEnter={() => setActive(index)}
-                  onClick={() => pick(index)}
-                  className={`flex w-full cursor-pointer items-center justify-between gap-2 px-3 py-2 text-left font-body text-sm transition-colors ${
-                    index === active ? "bg-veil text-olive" : "text-ink"
-                  }`}
-                >
-                  {option.label}
-                  {option.value === value ? (
-                    <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                  ) : null}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+              <ul
+                id={listId}
+                role="listbox"
+                className="max-h-60 overflow-y-auto"
+              >
+                {shown.map((option, index) => (
+                  <li key={option.value}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={option.value === value}
+                      onMouseEnter={() => setActive(index)}
+                      onClick={() => pick(index)}
+                      className={`flex w-full cursor-pointer items-center justify-between gap-2 px-3 py-2 text-left font-body text-sm transition-colors ${
+                        index === active ? "bg-veil text-olive" : "text-ink"
+                      }`}
+                    >
+                      {option.label}
+                      {option.value === value ? (
+                        <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                      ) : null}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

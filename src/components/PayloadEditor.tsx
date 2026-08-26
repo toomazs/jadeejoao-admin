@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from "lucide-react";
 
 import { ChapterPhotosSlot } from "./ChapterPhotos";
+import { IconField } from "./IconField";
 import { GiftListSlot } from "./GiftList";
 import { DateTimeField, ImageField } from "./fields";
 import { createContext, use } from "react";
@@ -163,6 +164,12 @@ export function PayloadEditor({
     }
     if (IMAGE.test(key)) {
       return <ImageField fieldKey={key} value={value} onChange={onChange} />;
+    }
+    // The programme's icon is a word the site looks up in a table. Typed by
+    // hand it is a word in English from a list nobody can see, and a typo
+    // draws nothing at all.
+    if (key === "icon") {
+      return <IconField value={value} onChange={onChange} />;
     }
     // A chapter is several screens tall and shows one scene at a time, so the
     // accordion's anchor cannot also be the bio's — clicking into the bio has

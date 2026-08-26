@@ -1,10 +1,11 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 
 import { $api } from '../api/client'
-import { ScreenTitle } from '../components/Shell'
 import { Card, Empty, Stat } from '../components/ui'
 import { CATEGORY_PT, SIDE_PT, money } from '../lib/labels'
+import { useSession } from '../lib/session'
+import { Welcome } from '../components/Welcome'
 
 /**
  * What the couple wants to know at a glance: how far off the day is, how the
@@ -27,7 +28,22 @@ function daysUntil(iso: string): number {
   return Math.round((then.getTime() - today.getTime()) / 86400000)
 }
 
+/** Shown once per visit, not once per glance at the dashboard. */
+const GREETED = 'jj-admin:greeted'
+
 export function Dashboard() {
+  const { name, greeting } = useSession()
+  // The greeting belongs to arriving. Coming back to this screen from
+  // Convidados is not arriving, and replaying it there would turn a welcome
+  // into a thing that keeps happening.
+  const [greeted, setGreeted] = useState(
+    () => !name || sessionStorage.getItem(GREETED) === '1',
+  )
+  const settle = useCallback(() => {
+    sessionStorage.setItem(GREETED, '1')
+    setGreeted(true)
+  }, [])
+
   const guests = $api.useQuery('get', '/api/v1/admin/guests')
   const messages = $api.useQuery('get', '/api/v1/admin/messages')
   const contributions = $api.useQuery('get', '/api/v1/admin/contributions')
@@ -107,7 +123,18 @@ export function Dashboard() {
 
   return (
     <>
-      <ScreenTitle title="Painel" subtitle="Como está a lista e o que espera por vocês." />
+      <div className="mb-5">
+        {greeted ? (
+          <h1 className="font-display text-3xl text-olive">
+            {name ? `${greeting}, ${name}` : 'Painel'}
+          </h1>
+        ) : (
+          <Welcome greeting={greeting} name={name} onDone={settle} />
+        )}
+        <p className="mt-1 font-body text-base text-dark-gray">
+          Veja como está a lista e o que espera por vocês.
+        </p>
+      </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat

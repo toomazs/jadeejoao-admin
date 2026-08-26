@@ -11,6 +11,18 @@ interface SessionState {
   ready: boolean
   mustChange: boolean
   email: string
+  /**
+   * How this person is addressed, from their Supabase account rather than from
+   * a table in here. Three people use this panel and it would have been easy
+   * to write their names down in the code; then adding a fourth means a
+   * deploy, and correcting a spelling means a deploy.
+   *
+   * The greeting comes with the name because Portuguese has a gender and a
+   * name does not tell you which — guessing from the letters is how software
+   * calls people the wrong thing.
+   */
+  name: string
+  greeting: string
   leave: () => Promise<void>
 }
 
@@ -46,6 +58,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     ready,
     mustChange: mustChangePassword(session),
     email: session?.user?.email ?? '',
+    name: (session?.user?.user_metadata?.display_name as string | undefined) ?? '',
+    greeting: (session?.user?.user_metadata?.greeting as string | undefined) ?? 'Bem-vindo',
     leave: async () => {
       await signOut()
       setSession(null)

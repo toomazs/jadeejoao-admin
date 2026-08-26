@@ -23,19 +23,6 @@ const NAV = [
   { to: '/conteudo', label: 'Conteúdo', icon: CalendarHeart },
 ]
 
-/**
- * Who is signed in, said as a person rather than as an address.
- *
- * The panel had their email under the logo, which is how a system refers to an
- * account and not how anyone refers to themselves. Three people use this and
- * we know all three, so it can simply greet them.
- */
-const WHO: Record<string, { greeting: string; name: string }> = {
-  'jadenascimenttoc@gmail.com': { greeting: 'Bem-vinda', name: 'Jade' },
-  'joaopedro.dp23@gmail.com': { greeting: 'Bem-vindo', name: 'João' },
-  'eduardotoomaz@outlook.com': { greeting: 'Bem-vindo', name: 'Eduardo' },
-}
-
 /** Remembered, so the panel opens the way it was left. */
 const FOLDED = 'jj-admin:sidebar-folded'
 
@@ -51,14 +38,13 @@ const FOLDED = 'jj-admin:sidebar-folded'
  * set again every morning.
  */
 export function Shell({ children }: { children: ReactNode }) {
-  const { email, leave } = useSession()
+  const { name, leave } = useSession()
   const [folded, setFolded] = useState(() => localStorage.getItem(FOLDED) === '1')
 
   useEffect(() => {
     localStorage.setItem(FOLDED, folded ? '1' : '0')
   }, [folded])
 
-  const who = WHO[(email ?? '').toLowerCase()]
 
   return (
     // On a wide screen the shell owns the viewport and each screen scrolls
@@ -108,18 +94,11 @@ export function Shell({ children }: { children: ReactNode }) {
         {/* Pinned to the bottom of the column, where the account lives in
             every panel anybody has used before. */}
         <div className="mt-auto hidden border-t border-sand-line lg:block">
-          {who ? (
+          {name ? (
             <div className={`px-4 py-3 ${folded ? 'lg:px-0 lg:text-center' : ''}`}>
-              {folded ? (
-                <p className="font-display text-lg text-olive" title={`${who.greeting}, ${who.name}`}>
-                  {who.name.charAt(0)}
-                </p>
-              ) : (
-                <>
-                  <p className="font-body text-xs text-dark-gray">{who.greeting},</p>
-                  <p className="font-display text-lg leading-tight text-olive">{who.name}</p>
-                </>
-              )}
+              <p className="font-display text-lg leading-tight text-olive" title={name}>
+                {folded ? name.charAt(0) : name}
+              </p>
             </div>
           ) : null}
 

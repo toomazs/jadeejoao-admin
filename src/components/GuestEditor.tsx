@@ -253,24 +253,28 @@ export function GuestEditor({
             hint="Amigos, família, trabalho…"
           />
           <div>
-            <Select
-              label="Papel"
-              value={customRole ? OUTRO : ceremonyRole}
-              onChange={(next) => {
-                if (next === OUTRO) {
-                  setCustomRole(true);
-                  setCeremonyRole("");
-                  return;
-                }
-                setCustomRole(false);
-                setCeremonyRole(next);
-              }}
-              options={[
-                { value: "", label: "— sem papel —" },
-                ...CEREMONY_ROLES.map((role) => ({ value: role, label: role })),
-                { value: OUTRO, label: "Outro…" },
-              ]}
-            />
+            <Rotulado label="Papel">
+              <Select
+                value={customRole ? OUTRO : ceremonyRole}
+                onChange={(next) => {
+                  if (next === OUTRO) {
+                    setCustomRole(true);
+                    setCeremonyRole("");
+                    return;
+                  }
+                  setCustomRole(false);
+                  setCeremonyRole(next);
+                }}
+                options={[
+                  { value: "", label: "— sem papel —" },
+                  ...CEREMONY_ROLES.map((role) => ({
+                    value: role,
+                    label: role,
+                  })),
+                  { value: OUTRO, label: "Outro…" },
+                ]}
+              />
+            </Rotulado>
             {/* Typed by hand only when they ask for it. Free text every time is
                 how "Madrinha" and "madrinha" become two roles, and the ceremony
                 card grows a duplicate of itself. */}

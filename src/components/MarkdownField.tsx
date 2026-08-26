@@ -175,7 +175,7 @@ export function MarkdownField({
           const text = event.clipboardData.getData('text/plain')
           document.execCommand('insertText', false, text)
         }}
-        className={`w-full border bg-cream px-3 py-2 font-body text-sm leading-[1.55] text-ink [&_a]:text-olive [&_a]:underline [&_p]:mb-2 [&_p:last-child]:mb-0 ${
+        className={`min-h-16 w-full border bg-cream px-3 py-2 font-body text-sm leading-[1.55] text-ink [&_a]:text-olive [&_a]:underline [&_p]:mb-2 [&_p:last-child]:mb-0 ${
           focused ? 'border-olive' : 'border-olive-line'
         }`}
       />

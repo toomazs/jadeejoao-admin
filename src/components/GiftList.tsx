@@ -3,6 +3,7 @@ import { createContext, use } from 'react'
 import type { ReactNode } from 'react'
 
 import { ImageField } from './fields'
+import { MarkdownField } from './MarkdownField'
 import {
   Accordion,
   Button,
@@ -148,15 +149,16 @@ export function GiftList({
               onChange={(event) => update(at, { title: event.target.value })}
             />
 
-            <label className="block">
-              <span className="font-body text-sm text-dark-gray">Descrição</span>
-              <textarea
+            {/* The same field the rest of the panel uses: it takes the height
+                the text needs instead of a fixed three rows with a scrollbar
+                inside, and the card on the site reads the formatting. */}
+            <div>
+              <span className="block font-body text-sm text-dark-gray">Descrição</span>
+              <MarkdownField
                 value={gift.description ?? ''}
-                rows={3}
-                onChange={(event) => update(at, { description: event.target.value })}
-                className="mt-1 w-full resize-y border border-olive-line bg-cream px-3 py-2 font-body text-sm text-ink focus:border-olive"
+                onChange={(description) => update(at, { description })}
               />
-            </label>
+            </div>
 
             <div>
               <span className="block font-body text-xs tracking-[0.1em] text-dark-gray uppercase">

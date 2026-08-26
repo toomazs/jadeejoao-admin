@@ -98,6 +98,30 @@ export function DataTable<T>({
 
   const active = Object.values(filters).reduce((n, set) => n + (set.size > 0 ? 1 : 0), 0)
 
+  /**
+   * A page is a view onto one particular result set, so a different result set
+   * starts at the beginning.
+   *
+   * The search box lives on the screen above, filtering the rows before they
+   * ever reach this table — so narrowing a hundred and twenty-two names to
+   * thirty while sitting on page three left the couple on page two of results
+   * they had just asked for, wondering what they were looking at.
+   *
+   * Keyed on the shape of the answer rather than on `rows`, whose identity
+   * changes on every render of the parent: resetting on that would pin the
+   * table to page one and make the arrows do nothing.
+   */
+  const query = `${shown.length}|${JSON.stringify(sort)}|${Object.entries(filters)
+    .map(([key, set]) => `${key}:${[...set].sort().join(',')}`)
+    .sort()
+    .join('|')}`
+  const seen = useRef(query)
+  useEffect(() => {
+    if (seen.current === query) return
+    seen.current = query
+    setPage(0)
+  }, [query])
+
   const pages = Math.max(1, Math.ceil(shown.length / perPage))
   // Filtering down to fewer rows than the current page holds would otherwise
   // leave the table showing an empty page of a list that has results.

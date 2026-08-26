@@ -144,7 +144,19 @@ export function GuestEditor({
     .filter(([id]) => id !== row.groupId)
     .sort((a, b) => a[1].localeCompare(b[1], "pt-BR"));
 
-  const submit = () => {
+  /**
+   * Everything the modal is holding, saved in one go.
+   *
+   * Sequential and awaited rather than callbacks inside callbacks: there are up
+   * to three writes here and the couple pressed one button, so a failure in the
+   * middle has to stop and say so rather than half-finish quietly.
+   *
+   * The companion field is part of this on purpose. It has its own
+   * "Acrescentar" button, but it sits inside the form and the green button in
+   * the footer says "Salvar" — typing a name there and saving used to close the
+   * modal and throw the name away without a word.
+   */
+  const submit = async () => {
     setError("");
     const details = {
       full_name: name.trim(),
@@ -156,39 +168,43 @@ export function GuestEditor({
       notes,
     };
 
-    if (creating) {
-      // Nothing to rename: a new person's invitation is labelled with their
-      // name. But they can be born straight into somebody else's, which is
-      // what "acompanhante" means most of the time.
-      create.mutate(
-        { body: { ...details, group_id: moveTo || undefined } as never },
-        { onSuccess: onSaved, onError: fail },
-      );
-      return;
-    }
+    try {
+      if (creating) {
+        // Nothing to rename: a new person's invitation is labelled with their
+        // name. But they can be born straight into somebody else's, which is
+        // what "acompanhante" means most of the time.
+        await create.mutateAsync({
+          body: { ...details, group_id: moveTo || undefined } as never,
+        });
+        onSaved();
+        return;
+      }
 
-    save.mutate(
-      {
+      await save.mutateAsync({
         params: { path: { guest_id: row.guestId } },
         body: details as never,
-      },
-      {
-        onSuccess: () => {
-          if (label.trim() && label.trim() !== row.groupLabel) {
-            rename.mutate(
-              {
-                params: { path: { group_id: row.groupId } },
-                body: { label: label.trim() },
-              },
-              { onSuccess: onSaved, onError: fail },
-            );
-            return;
-          }
-          onSaved();
-        },
-        onError: fail,
-      },
-    );
+      });
+
+      if (label.trim() && label.trim() !== row.groupLabel) {
+        await rename.mutateAsync({
+          params: { path: { group_id: row.groupId } },
+          body: { label: label.trim() },
+        });
+      }
+
+      if (companion.trim()) {
+        await addCompanion.mutateAsync({
+          body: {
+            full_name: companion.trim(),
+            group_id: row.groupId,
+          } as never,
+        });
+      }
+
+      onSaved();
+    } catch (err) {
+      fail(err);
+    }
   };
 
   return (
@@ -206,7 +222,7 @@ export function GuestEditor({
             Cancelar
           </Button>
           <Button
-            onClick={submit}
+            onClick={() => void submit()}
             disabled={save.isPending || rename.isPending || create.isPending}
           >
             {save.isPending || rename.isPending ? "Salvando…" : "Salvar"}

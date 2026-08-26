@@ -13,7 +13,6 @@ import type { ReactNode } from 'react'
 import { NavLink } from 'react-router'
 
 import logo from '../../images/logo.webp'
-import logoVertical from '../../images/logo-vertical.webp'
 import { useSession } from '../lib/session'
 
 const NAV = [
@@ -61,12 +60,8 @@ export function Shell({ children }: { children: ReactNode }) {
         {/* The mark says what this is; the word "Painel" beside it said it
             again, and the first item of the navigation below says it a third
             time. */}
-        <div className={`flex items-center px-4 py-4 ${folded ? 'lg:justify-center lg:px-0' : ''}`}>
-          <img
-            src={folded ? logo : logoVertical}
-            alt="Jade e João"
-            className={folded ? 'h-8 w-auto' : 'h-16 w-auto'}
-          />
+        <div className="flex items-center justify-center px-4 py-4">
+          <img src={logo} alt="Jade e João" className="h-8 w-auto" />
         </div>
 
         <nav

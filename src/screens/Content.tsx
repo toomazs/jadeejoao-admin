@@ -2,11 +2,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 
 import { $api, problemDetail } from '../api/client'
-import { PayloadEditor } from '../components/PayloadEditor'
+import { PayloadEditor, SaveRow } from '../components/PayloadEditor'
 import { ScreenTitle } from '../components/Shell'
 import { SitePreview } from '../components/SitePreview'
 import type { Draft } from '../components/SitePreview'
-import { Button, Notice, Toggle } from '../components/ui'
+import { Accordion, Button, Notice, Toggle } from '../components/ui'
 import { SECTION_PT } from '../lib/labels-fields'
 import { hasPendingImages, uploadPendingImages } from '../lib/uploads'
 
@@ -141,14 +141,19 @@ export function Content() {
                   hint="Desligada, ela some do site inteiro."
                 />
               </div>
+              {/* The section's own fields fold too, so a long one opens on
+                  what is being worked on rather than all of it at once. */}
               <div className="mt-4">
-                <PayloadEditor
-                  value={payload}
-                  path={slug}
-                  onChange={(next) => setDraft({ ...draft, [slug]: next as never })}
-                  onSave={() => void submit()}
-                  saving={save.isPending || uploading}
-                />
+                <Accordion title={SECTION_PT[slug] ?? slug} defaultOpen>
+                  <PayloadEditor
+                    value={payload}
+                    path={slug}
+                    onChange={(next) => setDraft({ ...draft, [slug]: next as never })}
+                    onSave={() => void submit()}
+                    saving={save.isPending || uploading}
+                  />
+                  <SaveRow onSave={() => void submit()} saving={save.isPending || uploading} />
+                </Accordion>
               </div>
             </>
           ) : (

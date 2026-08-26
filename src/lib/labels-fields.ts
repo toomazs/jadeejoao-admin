@@ -5,6 +5,25 @@
  * datetime"), so this is a courtesy rather than a contract — a new field in the
  * API shows up in the panel with or without a translation, which is the point.
  */
+/**
+ * Where a field actually shows up, for the ones whose name suggests otherwise.
+ *
+ * Both of these had already fooled somebody: the hero's names are the brand
+ * wordmark, an image, so editing `couple_names` changes nothing there — it is
+ * the footer signature. And the ceremony time is never printed anywhere, but
+ * the countdown counts to it, so blanking it would move the target fifteen
+ * hours earlier without a single visible clue.
+ */
+export const FIELD_HINT: Record<string, string> = {
+  couple_names:
+    'Aparece na assinatura do rodapé. No topo do site quem aparece é a arte do logo, que não muda por aqui.',
+  event_datetime:
+    'A data aparece no topo, no Grande Dia e no rodapé. A hora não aparece em lugar nenhum, mas é até ela que a contagem regressiva conta.',
+  hero_image_url: 'A foto grande de abertura, atrás do logo.',
+  eye_x: 'Posição do olho da Catarina na foto, de onde saem as estrelinhas.',
+  eye_y: 'Posição do olho da Catarina na foto, de onde saem as estrelinhas.',
+}
+
 export const FIELD_PT: Record<string, string> = {
   title: 'Título',
   body: 'Texto',

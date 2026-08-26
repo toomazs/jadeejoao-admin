@@ -2,7 +2,7 @@ import { Plus, Trash2 } from 'lucide-react'
 
 import { DateTimeField, ImageField } from './fields'
 import { Accordion, Checkbox, DateField } from './ui'
-import { FIELD_PT } from '../lib/labels-fields'
+import { FIELD_HINT, FIELD_PT } from '../lib/labels-fields'
 
 /**
  * An editor that reads the payload rather than a hand-written form per section.
@@ -142,6 +142,7 @@ export function PayloadEditor({ value, onChange, path = '', onSave, saving }: Ed
           return (
             <Accordion key={key} title={humanize(key)} subtitle={summarize(child)}>
               {editor}
+              <SaveRow onSave={onSave} saving={saving} />
             </Accordion>
           )
         }
@@ -154,6 +155,14 @@ export function PayloadEditor({ value, onChange, path = '', onSave, saving }: Ed
             <span className="block font-body text-xs tracking-[0.1em] text-dark-gray uppercase">
               {humanize(key)}
             </span>
+            {/* Some field names promise more than they deliver — the hint says
+                where the value actually lands, so nobody edits it twice
+                wondering why the site did not move. */}
+            {FIELD_HINT[key] ? (
+              <span className="mt-0.5 block font-body text-xs text-dark-gray italic">
+                {FIELD_HINT[key]}
+              </span>
+            ) : null}
             {editor}
           </div>
         )
@@ -245,16 +254,7 @@ function ArrayEditor({
             path={path}
             onChange={(next) => onChange(items.map((old, i) => (i === index ? next : old)))}
           />
-          {onSave ? (
-            <button
-              type="button"
-              onClick={onSave}
-              disabled={saving}
-              className="mt-3 min-h-9 cursor-pointer border border-olive bg-olive px-4 font-body text-sm text-cream transition-colors hover:bg-deep-olive disabled:opacity-40"
-            >
-              {saving ? 'Salvando…' : 'Salvar'}
-            </button>
-          ) : null}
+          <SaveRow onSave={onSave} saving={saving} />
         </Accordion>
       ))}
 
@@ -267,5 +267,26 @@ function ArrayEditor({
         Adicionar
       </button>
     </div>
+  )
+}
+
+/**
+ * The save button, repeated at the foot of every folded group.
+ *
+ * It saves the whole section, because that is what the API stores — but a
+ * section can be a long column, and making the couple scroll back to the top
+ * after editing one hotel is the kind of small friction that adds up.
+ */
+export function SaveRow({ onSave, saving }: { onSave?: () => void; saving?: boolean }) {
+  if (!onSave) return null
+  return (
+    <button
+      type="button"
+      onClick={onSave}
+      disabled={saving}
+      className="mt-3 min-h-10 cursor-pointer border border-olive bg-olive px-4 font-body text-sm text-cream transition-colors hover:bg-deep-olive disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      {saving ? 'Salvando…' : 'Salvar'}
+    </button>
   )
 }

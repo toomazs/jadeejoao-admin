@@ -1,75 +1,73 @@
 import { Bold, Italic, Link2, Pilcrow } from 'lucide-react'
-import { useEffect, useLayoutEffect, useRef } from 'react'
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 /**
- * A text field that shows the formatting instead of describing it.
+ * A text field where formatting is formatting, not syntax.
  *
- * The site renders these through markdown, so `**vão se casar!**` prints bold.
- * Showing raw asterisks and a separate "here is how it will look" line asks
- * the couple to hold two versions of their own sentence in their head at once.
+ * The payload stores markdown because the site renders markdown. But asterisks
+ * are a storage detail, and showing them to the couple — even faded — turns
+ * their own sentence into something that looks broken. A textarea cannot hide
+ * them and stay aligned, so this is a contenteditable: bold is bold on screen,
+ * and markdown is what gets written to the payload on the way out.
  *
- * So the text is drawn twice, exactly on top of itself: a styled layer behind
- * that paints the bold and dims the markers, and the real textarea in front
- * with transparent text. Every native behaviour — caret, selection, undo,
- * spellcheck, IME — is untouched, because it IS a textarea. The two layers
- * share font, padding and wrapping, so the characters line up to the pixel.
+ * Toggling comes free with it. `document.execCommand` is deprecated and still
+ * the only thing every browser implements for "make this bold, or un-bold it
+ * if it already is" — which is exactly the behaviour a second click needs.
  */
 
-const PATTERN = /(\*\*)(.+?)(\*\*)|(\*|_)(.+?)(\4)|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g
+/** Markdown in — the HTML the couple actually sees. */
+function toHtml(markdown: string): string {
+  const escaped = markdown
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
 
-/** The same text, with the emphasis painted and the markers faded. */
-function highlight(text: string): ReactNode[] {
-  const nodes: ReactNode[] = []
-  let last = 0
-  let match: RegExpExecArray | null
-  let key = 0
-  PATTERN.lastIndex = 0
-  while ((match = PATTERN.exec(text)) !== null) {
-    if (match.index > last) nodes.push(text.slice(last, match.index))
-    const [, b1, bold, b2, mark, italic, mark2, label, href] = match
-    if (bold !== undefined) {
-      nodes.push(
-        <span key={key}>
-          <span className="text-dark-gray/35">{b1}</span>
-          <strong>{bold}</strong>
-          <span className="text-dark-gray/35">{b2}</span>
-        </span>,
-      )
-    } else if (italic !== undefined) {
-      nodes.push(
-        <span key={key}>
-          <span className="text-dark-gray/35">{mark}</span>
-          <em>{italic}</em>
-          <span className="text-dark-gray/35">{mark2}</span>
-        </span>,
-      )
-    } else if (label !== undefined) {
-      nodes.push(
-        <span key={key}>
-          <span className="text-dark-gray/35">[</span>
-          <span className="text-olive underline decoration-1 underline-offset-2">{label}</span>
-          <span className="text-dark-gray/35">{`](${href})`}</span>
-        </span>,
-      )
-    }
-    last = PATTERN.lastIndex
-    key += 1
-  }
-  if (last < text.length) nodes.push(text.slice(last))
-  // A trailing newline needs something after it or the last line collapses
-  // and the layers drift apart by one row.
-  nodes.push('\n')
-  return nodes
+  const inline = escaped
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/(?<!\*)\*(?!\s)([^*]+?)(?<!\s)\*(?!\*)/g, '<em>$1</em>')
+    .replace(/_(.+?)_/g, '<em>$1</em>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>')
+
+  // A blank line is a paragraph; a single newline is a break inside one.
+  return inline
+    .split(/\n{2,}/)
+    .map((block) => `<p>${block.replace(/\n/g, '<br>') || '<br>'}</p>`)
+    .join('')
 }
 
-const TOOLS = [
-  { icon: Bold, label: 'Negrito', wrap: '**' },
-  { icon: Italic, label: 'Itálico', wrap: '*' },
-] as const
+/** And back out: the DOM the couple built — markdown for the payload. */
+function toMarkdown(root: HTMLElement): string {
+  const walk = (node: Node): string => {
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? ''
+    if (node.nodeType !== Node.ELEMENT_NODE) return ''
 
-/** Both layers wear exactly this, or the characters stop lining up. */
-const SHARED = 'px-3 py-2 font-body text-sm leading-[1.55] whitespace-pre-wrap break-words'
+    const el = node as HTMLElement
+    const inner = [...el.childNodes].map(walk).join('')
+    switch (el.tagName) {
+      case 'STRONG':
+      case 'B':
+        return inner.trim() ? `**${inner}**` : inner
+      case 'EM':
+      case 'I':
+        return inner.trim() ? `*${inner}*` : inner
+      case 'A':
+        return `[${inner}](${el.getAttribute('href') ?? ''})`
+      case 'BR':
+        return '\n'
+      case 'P':
+      case 'DIV':
+        return `${inner}\n\n`
+      default:
+        return inner
+    }
+  }
+
+  return [...root.childNodes]
+    .map(walk)
+    .join('')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
 
 export function MarkdownField({
   value,
@@ -78,120 +76,103 @@ export function MarkdownField({
   value: string
   onChange: (next: string) => void
 }) {
-  const area = useRef<HTMLTextAreaElement>(null)
-  const backdrop = useRef<HTMLDivElement>(null)
+  const box = useRef<HTMLDivElement>(null)
+  const [focused, setFocused] = useState(false)
+  /** What we last wrote out, so an echo of our own value never resets the caret. */
+  const mine = useRef(value)
 
-  /** Grows to fit, so a long letter is not read through a four-line window. */
-  useLayoutEffect(() => {
-    const el = area.current
+  useEffect(() => {
+    const el = box.current
     if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
+    // Rewriting innerHTML while somebody is typing would drop the caret to the
+    // start, so it only happens when the value came from somewhere else.
+    if (value === mine.current && el.innerHTML !== '') return
+    el.innerHTML = toHtml(value)
+    mine.current = value
   }, [value])
 
-  // The backdrop does not scroll on its own; it follows.
-  useEffect(() => {
-    const el = area.current
+  const emit = () => {
+    const el = box.current
     if (!el) return
-    const sync = () => {
-      if (backdrop.current) backdrop.current.scrollTop = el.scrollTop
-    }
-    el.addEventListener('scroll', sync)
-    return () => el.removeEventListener('scroll', sync)
-  }, [])
+    const markdown = toMarkdown(el)
+    mine.current = markdown
+    onChange(markdown)
+  }
 
-  const surround = (marker: string) => {
-    const el = area.current
-    if (!el) return
-    const { selectionStart: from, selectionEnd: to } = el
-    const chosen = value.slice(from, to)
-    onChange(`${value.slice(0, from)}${marker}${chosen}${marker}${value.slice(to)}`)
-    // Keep the selection around what was wrapped, so typing continues inside
-    // the emphasis rather than after it.
-    requestAnimationFrame(() => {
-      el.focus()
-      el.setSelectionRange(from + marker.length, to + marker.length)
-    })
+  /** execCommand toggles: bold on bold text removes it, which is the ask. */
+  const run = (command: string) => {
+    box.current?.focus()
+    document.execCommand(command)
+    emit()
   }
 
   const insertLink = () => {
-    const el = area.current
+    const el = box.current
     if (!el) return
-    const { selectionStart: from, selectionEnd: to } = el
-    const chosen = value.slice(from, to) || 'texto do link'
-    onChange(`${value.slice(0, from)}[${chosen}](https://)${value.slice(to)}`)
-    requestAnimationFrame(() => el.focus())
+    el.focus()
+    const url = window.prompt('Endereço do link', 'https://')
+    if (!url) return
+    document.execCommand('createLink', false, url)
+    emit()
   }
 
   const newParagraph = () => {
-    const el = area.current
-    if (!el) return
-    const at = el.selectionStart
-    // A blank line is what starts a paragraph; a single newline is a break
-    // inside the same one.
-    onChange(`${value.slice(0, at)}\n\n${value.slice(at)}`)
-    requestAnimationFrame(() => {
-      el.focus()
-      el.setSelectionRange(at + 2, at + 2)
-    })
+    box.current?.focus()
+    document.execCommand('insertParagraph')
+    emit()
   }
+
+  const tools = [
+    { icon: Bold, label: 'Negrito', run: () => run('bold') },
+    { icon: Italic, label: 'Itálico', run: () => run('italic') },
+    { icon: Link2, label: 'Link', run: insertLink },
+    { icon: Pilcrow, label: 'Novo parágrafo', run: newParagraph },
+  ]
 
   return (
     <div className="mt-1">
       <div className="flex flex-wrap items-center gap-1 border border-b-0 border-olive-line bg-veil px-1.5 py-1">
-        {TOOLS.map(({ icon: Icon, label, wrap }) => (
+        {tools.map(({ icon: Icon, label, run: onRun }) => (
           <button
             key={label}
             type="button"
             title={label}
             aria-label={label}
+            // Without this the field loses focus before the command runs, and
+            // there is no selection left to format.
             onMouseDown={(event) => event.preventDefault()}
-            onClick={() => surround(wrap)}
+            onClick={onRun}
             className="cursor-pointer p-1.5 text-dark-gray transition-colors hover:text-olive"
           >
             <Icon className="h-4 w-4" aria-hidden="true" />
           </button>
         ))}
-        <button
-          type="button"
-          title="Link"
-          aria-label="Link"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={insertLink}
-          className="cursor-pointer p-1.5 text-dark-gray transition-colors hover:text-olive"
-        >
-          <Link2 className="h-4 w-4" aria-hidden="true" />
-        </button>
-        <button
-          type="button"
-          title="Novo parágrafo"
-          aria-label="Novo parágrafo"
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={newParagraph}
-          className="cursor-pointer p-1.5 text-dark-gray transition-colors hover:text-olive"
-        >
-          <Pilcrow className="h-4 w-4" aria-hidden="true" />
-        </button>
       </div>
 
-      <div className="relative border border-olive-line bg-cream focus-within:border-olive">
-        <div
-          ref={backdrop}
-          aria-hidden="true"
-          className={`pointer-events-none absolute inset-0 overflow-hidden text-ink ${SHARED}`}
-        >
-          {highlight(value)}
-        </div>
-        <textarea
-          ref={area}
-          value={value}
-          rows={1}
-          onChange={(event) => onChange(event.target.value)}
-          // Transparent text over the painted copy; the caret keeps its colour
-          // so it stays visible against it.
-          className={`relative block w-full resize-none overflow-hidden bg-transparent text-transparent caret-ink outline-none ${SHARED}`}
-        />
-      </div>
+      <div
+        ref={box}
+        contentEditable
+        suppressContentEditableWarning
+        role="textbox"
+        aria-multiline="true"
+        spellCheck
+        onInput={emit}
+        onBlur={() => {
+          setFocused(false)
+          emit()
+        }}
+        onFocus={() => setFocused(true)}
+        onPaste={(event) => {
+          // Paste as plain text: pasting from a document otherwise drags in
+          // fonts and colours that have nothing to do with the site.
+          event.preventDefault()
+          const text = event.clipboardData.getData('text/plain')
+          document.execCommand('insertText', false, text)
+        }}
+        className={`w-full border bg-cream px-3 py-2 font-body text-sm leading-[1.55] text-ink [&_a]:text-olive [&_a]:underline [&_p]:mb-2 [&_p:last-child]:mb-0 ${
+          focused ? 'border-olive' : 'border-olive-line'
+        }`}
+      />
     </div>
   )
 }

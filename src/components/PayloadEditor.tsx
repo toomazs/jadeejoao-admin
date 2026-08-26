@@ -261,7 +261,9 @@ export function PayloadEditor({
         // Anything with an inside of its own folds away: the bride's chapter is
         // a name, a bio, a portrait and a letter, and flattened it buries the
         // shape of the section under one long column.
-        if (child && typeof child === "object") {
+        // A list is already a column of accordions, one per item — wrapping
+        // it in one more only repeats the name.
+        if (child && typeof child === "object" && !Array.isArray(child)) {
           return (
             <Accordion
               key={key}

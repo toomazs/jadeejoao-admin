@@ -118,19 +118,28 @@ export function CropModal({ file, aspect, onCancel, onDone }: CropModalProps) {
         if (event.target === event.currentTarget) onCancel()
       }}
     >
-      <div className="flex w-full max-w-2xl flex-col border border-olive-line bg-cream">
-        <header className="border-b border-sand-line px-4 py-3">
+      <div className="flex max-h-full w-full max-w-2xl flex-col border border-olive-line bg-cream">
+        <header className="shrink-0 border-b border-sand-line px-4 py-3">
           <h2 className="font-display text-xl text-olive">Ajustar a foto</h2>
           <p className="mt-0.5 font-body text-sm text-dark-gray">
             Arraste para escolher o que aparece e use a barra para aproximar.
           </p>
         </header>
 
-        <div className="p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
           <div
             ref={frame}
-            className="relative w-full cursor-grab overflow-hidden border border-olive-line bg-veil select-none active:cursor-grabbing"
-            style={{ aspectRatio: String(aspect) }}
+            className="relative mx-auto cursor-grab overflow-hidden border border-olive-line bg-veil select-none active:cursor-grabbing"
+            // The frame keeps the site's exact shape — the crop is computed
+            // from what it measures, so a frame that lied about its ratio
+            // would hand back a photo cropped differently from the one being
+            // looked at. So the height is capped by capping the WIDTH: a
+            // portrait at full width came out taller than the screen and put
+            // the buttons somewhere nobody could reach.
+            style={{
+              aspectRatio: String(aspect),
+              width: `min(100%, calc(48vh * ${aspect}))`,
+            }}
             onPointerDown={(event) => {
               dragging.current = { x: event.clientX - offset.x, y: event.clientY - offset.y }
               event.currentTarget.setPointerCapture(event.pointerId)
@@ -176,7 +185,7 @@ export function CropModal({ file, aspect, onCancel, onDone }: CropModalProps) {
           </div>
         </div>
 
-        <footer className="flex justify-end gap-2 border-t border-sand-line px-4 py-3">
+        <footer className="flex shrink-0 justify-end gap-2 border-t border-sand-line px-4 py-3">
           <Button tone="quiet" onClick={onCancel}>
             Cancelar
           </Button>

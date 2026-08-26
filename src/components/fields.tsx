@@ -81,68 +81,69 @@ export function ImageField({
 
   return (
     <div className="mt-1">
-      {/* The photo is the obvious thing to click, so it is the button — the
-          one below is for people who do not think to try. */}
-      {value ? (
-        <div className="relative inline-block">
-          <button
-            type="button"
-            onClick={() => input.current?.click()}
-            aria-label="Trocar a foto"
-            className="group relative block cursor-pointer overflow-hidden border border-sand-line transition-colors hover:border-olive"
-          >
-            <img
-              src={value}
-              alt=""
-              className="h-24 w-auto max-w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-            <span className="absolute inset-0 grid place-items-center bg-ink/55 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-              <span className="flex items-center gap-1.5 font-body text-sm text-cream">
-                <ImageUp className="h-4 w-4" aria-hidden="true" />
-                trocar
-              </span>
-            </span>
-          </button>
-          {pending ? (
-            <span className="pointer-events-none absolute -top-2 -right-2 border border-gold-sand bg-cream px-1.5 font-body text-xs text-olive">
-              não salva
-            </span>
-          ) : null}
-        </div>
-      ) : (
-        <p className="font-body text-xs text-dark-gray italic">sem foto</p>
-      )}
+      <input
+        ref={input}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          if (file) setPicked(file)
+          event.target.value = ''
+        }}
+      />
 
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <input
-          ref={input}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(event) => {
-            const file = event.target.files?.[0]
-            if (file) setPicked(file)
-            event.target.value = ''
-          }}
-        />
-        <Button tone="quiet" onClick={() => input.current?.click()}>
-          <span className="flex items-center gap-2">
-            <ImageUp className="h-4 w-4" aria-hidden="true" />
-            {value ? 'Trocar foto' : 'Escolher foto'}
-          </span>
-        </Button>
-        {value ? (
+      {/* The photo is the button. A second one underneath saying "trocar foto"
+          said the same thing twice — the hover already offers it, and the only
+          thing that genuinely is not the photo is taking it away. */}
+      {value ? (
+        <div className="flex items-start gap-2">
+          <div className="relative inline-block">
+            <button
+              type="button"
+              onClick={() => input.current?.click()}
+              aria-label="Trocar a foto"
+              className="group relative block cursor-pointer overflow-hidden border border-sand-line transition-colors hover:border-olive"
+            >
+              <img
+                src={value}
+                alt=""
+                className="h-24 w-auto max-w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+              <span className="absolute inset-0 grid place-items-center bg-ink/55 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <span className="flex items-center gap-1.5 font-body text-sm text-cream">
+                  <ImageUp className="h-4 w-4" aria-hidden="true" />
+                  trocar
+                </span>
+              </span>
+            </button>
+            {pending ? (
+              <span className="pointer-events-none absolute -top-2 -right-2 border border-gold-sand bg-cream px-1.5 font-body text-xs text-olive">
+                não salva
+              </span>
+            ) : null}
+          </div>
           <button
             type="button"
             onClick={() => onChange('')}
             aria-label="Tirar a foto"
-            className="flex min-h-9 cursor-pointer items-center gap-1.5 px-2 font-body text-sm text-dark-gray transition-colors hover:text-terracotta"
+            title="Tirar a foto"
+            className="flex min-h-9 cursor-pointer items-center gap-1.5 px-1.5 font-body text-sm text-dark-gray transition-colors hover:text-terracotta"
           >
             <X className="h-4 w-4" aria-hidden="true" />
             tirar
           </button>
-        ) : null}
-      </div>
+        </div>
+      ) : (
+        // Nothing to hover when there is no photo, so here the button earns
+        // its place.
+        <Button tone="quiet" onClick={() => input.current?.click()}>
+          <span className="flex items-center gap-2">
+            <ImageUp className="h-4 w-4" aria-hidden="true" />
+            Escolher foto
+          </span>
+        </Button>
+      )}
 
       {picked ? (
         <CropModal

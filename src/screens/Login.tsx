@@ -40,9 +40,6 @@ export function Login() {
       >
         <img src={logo} alt="" aria-hidden="true" className="mx-auto h-14 w-auto" />
         <h1 className="mt-5 text-center font-display text-2xl text-olive">Painel dos noivos</h1>
-        <p className="mt-1 text-center font-body text-sm text-dark-gray">
-          Jade &amp; João · 7 de agosto de 2027
-        </p>
 
         <Field
           label="E-mail"

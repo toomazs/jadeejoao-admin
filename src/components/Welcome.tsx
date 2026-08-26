@@ -4,22 +4,31 @@ import { useEffect, useRef, useState } from 'react'
  * The greeting that arrives with you and then settles into being the page's
  * title.
  *
- * Not a splash that plays and disappears — nothing is hidden behind it and no
- * time is spent waiting. It is the heading, drawn where the eye already is
- * (the middle of the screen) and then walking to where headings live. The
- * panel is the couple's, and the first thing it says should be their name.
+ * Four beats, in order, and the order is the whole thing:
  *
- * The flight is done with a transform, so the browser moves it on the
- * compositor and the text is never re-laid-out mid-journey. It measures the
- * distance to where the heading will end up, starts there-plus-the-offset, and
- * animates the offset to zero — the element is in its final place the whole
- * time, which is what makes it land exactly and not approximately.
+ *   1. cream fills the window and the greeting stands in the middle of it
+ *   2. still on cream, it walks to where headings live
+ *   3. only then the cream fades, and the panel is simply there behind it
+ *   4. the greeting is handed over to the page, which owns it from then on
+ *
+ * The first version faded the cream out *during* the walk, so the dashboard
+ * came up underneath a heading that was still moving across it — two things
+ * happening at once, both half-visible.
+ *
+ * The walk is a transform. It measures the distance to where the heading will
+ * end up, starts there-plus-that-distance, and animates the distance to zero:
+ * the element sits in its final place the whole time, which is what makes it
+ * land exactly rather than approximately.
  */
 
-/** How long the greeting holds still before it goes. */
-const HOLD_MS = 1000
-/** The flight itself. Kept here rather than in CSS because the JS waits on it. */
+/** Standing still in the middle, being read. */
+const HOLD_MS = 2000
+/** The walk. */
 const FLIGHT_MS = 700
+/** The cream giving way. */
+const REVEAL_MS = 600
+
+type Beat = 'holding' | 'flying' | 'revealing'
 
 export function Welcome({
   greeting,
@@ -28,19 +37,18 @@ export function Welcome({
 }: {
   greeting: string
   name: string
-  /** Fired when the greeting has landed and the page can take over. */
+  /** Fired once the panel is uncovered and the page can take its title back. */
   onDone: () => void
 }) {
   const heading = useRef<HTMLHeadingElement>(null)
-  const [offset, setOffset] = useState<{ x: number; y: number; scale: number } | null>(null)
-  const [flying, setFlying] = useState(false)
+  const [offset, setOffset] = useState<{ x: number; y: number } | null>(null)
+  const [beat, setBeat] = useState<Beat>('holding')
 
   useEffect(() => {
     const el = heading.current
     if (!el) return
 
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reduced) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       onDone()
       return
     }
@@ -51,41 +59,42 @@ export function Welcome({
     setOffset({
       x: window.innerWidth / 2 - (rect.left + rect.width / 2),
       y: window.innerHeight / 2 - (rect.top + rect.height / 2),
-      scale: 1.6,
     })
 
-    const goes = window.setTimeout(() => setFlying(true), HOLD_MS)
-    const lands = window.setTimeout(onDone, HOLD_MS + FLIGHT_MS)
-    return () => {
-      window.clearTimeout(goes)
-      window.clearTimeout(lands)
-    }
+    const timers = [
+      window.setTimeout(() => setBeat('flying'), HOLD_MS),
+      window.setTimeout(() => setBeat('revealing'), HOLD_MS + FLIGHT_MS),
+      window.setTimeout(onDone, HOLD_MS + FLIGHT_MS + REVEAL_MS),
+    ]
+    return () => timers.forEach(window.clearTimeout)
   }, [onDone])
 
-  const away = offset && !flying
+  const centred = offset !== null && beat === 'holding'
 
   return (
     <>
-      {/* Opaque from the first paint and fading only on the way out. Faded in
-          instead, it would have left the dashboard showing underneath a
-          greeting floating over it for half a second — and it also covers the
-          one frame before the distance is measured, where the heading is still
-          sitting in its final place. */}
+      {/* Opaque from the first paint, and only fading once the greeting has
+          arrived. It also covers the single frame before the distance is
+          measured, where the heading is still sitting in its final place. */}
       <div
         aria-hidden="true"
-        style={{ opacity: flying ? 0 : 1, transition: `opacity ${FLIGHT_MS}ms ease-out` }}
+        style={{
+          opacity: beat === 'revealing' ? 0 : 1,
+          transition: `opacity ${REVEAL_MS}ms ease-out`,
+        }}
         className="pointer-events-none fixed inset-0 z-30 bg-cream"
       />
       <h1
         ref={heading}
         className="relative z-40 font-display text-3xl text-olive"
         style={{
-          transform: away
-            ? `translate(${offset.x}px, ${offset.y}px) scale(${offset.scale})`
+          transform: centred
+            ? `translate(${offset.x}px, ${offset.y}px) scale(1.6)`
             : undefined,
-          transition: flying
-            ? `transform ${FLIGHT_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`
-            : undefined,
+          transition:
+            beat === 'holding'
+              ? undefined
+              : `transform ${FLIGHT_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
         }}
       >
         {greeting}, {name}

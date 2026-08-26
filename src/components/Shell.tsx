@@ -13,6 +13,7 @@ import type { ReactNode } from 'react'
 import { NavLink } from 'react-router'
 
 import logo from '../../images/logo.webp'
+import logoVertical from '../../images/logo-vertical.webp'
 import { useSession } from '../lib/session'
 
 const NAV = [
@@ -57,11 +58,15 @@ export function Shell({ children }: { children: ReactNode }) {
       } transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]`}
     >
       <aside className="flex flex-col border-b border-olive-line bg-cream lg:h-svh lg:border-r lg:border-b-0">
-        <div className={`flex items-center gap-3 px-4 py-4 ${folded ? 'lg:justify-center lg:px-0' : ''}`}>
-          <img src={logo} alt="" aria-hidden="true" className="h-8 w-auto shrink-0" />
-          <p className={`font-display text-lg leading-none text-olive ${folded ? 'lg:hidden' : ''}`}>
-            Painel
-          </p>
+        {/* The mark says what this is; the word "Painel" beside it said it
+            again, and the first item of the navigation below says it a third
+            time. */}
+        <div className={`flex items-center px-4 py-4 ${folded ? 'lg:justify-center lg:px-0' : ''}`}>
+          <img
+            src={folded ? logo : logoVertical}
+            alt="Jade e João"
+            className={folded ? 'h-8 w-auto' : 'h-16 w-auto'}
+          />
         </div>
 
         <nav

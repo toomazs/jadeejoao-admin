@@ -72,24 +72,23 @@ export function ChapterPhotos({
             {/* photo_url so the cropper uses the 4/5 the chapter draws these
                 in — any other shape hands back a photo the grid crops again. */}
             <ImageField
+              stacked
               fieldKey="photo_url"
               value={post.media_url ?? ''}
               onChange={(media_url) => update(at, { media_url })}
             />
 
-            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            {/* The caption is not edited here. It names the link for a screen
+                reader and shows nowhere, so it is not worth the row: the ones
+                that came from Instagram are kept as they are, and a photo
+                added here falls back to a generic label on the site. */}
+            <div className="flex min-w-0 flex-1 flex-col justify-center">
               <Field
                 label="Link do post"
                 type="url"
                 value={post.permalink ?? ''}
                 onChange={(event) => update(at, { permalink: event.target.value })}
                 placeholder="https://www.instagram.com/p/…"
-              />
-              <Field
-                label="Descrição"
-                hint="Não aparece na tela — é o que um leitor de tela anuncia."
-                value={post.caption ?? ''}
-                onChange={(event) => update(at, { caption: event.target.value })}
               />
             </div>
 

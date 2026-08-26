@@ -81,6 +81,14 @@ export const SECTION_PT: Record<string, string> = {
 export interface FieldGroup {
   title: string
   keys: string[]
+  /**
+   * Opens as soon as the section does.
+   *
+   * Where a section is one block of writing, folding it away costs a click to
+   * see the thing the tab was clicked for. Where it is several parts, the
+   * folds are what makes the shape readable, and only the first opens.
+   */
+  open?: boolean
 }
 
 export const SECTION_GROUPS: Record<string, FieldGroup[]> = {
@@ -92,23 +100,31 @@ export const SECTION_GROUPS: Record<string, FieldGroup[]> = {
     { title: 'Convite, entre os capítulos', keys: ['body'] },
     { title: 'O anúncio da Catarina', keys: ['announcement'] },
   ],
-  hero: [{ title: 'Abertura', keys: ['event_date', 'city_label', 'hero_image_url'] }],
+  hero: [
+    { title: 'Abertura', keys: ['event_date', 'city_label', 'hero_image_url'], open: true },
+  ],
   big_day: [
-    { title: 'Textos', keys: ['title', 'body', 'venue_notes'] },
+    { title: 'Textos', keys: ['title', 'body', 'venue_notes'], open: true },
     { title: 'Programação', keys: ['programme'] },
   ],
   getting_there: [
-    { title: 'Textos', keys: ['title', 'body', 'address', 'parking_notes'] },
+    { title: 'Textos', keys: ['title', 'body', 'address', 'parking_notes'], open: true },
     { title: 'Mapas', keys: ['map_embed_url', 'maps_url', 'maps_logo_url', 'waze_url', 'waze_logo_url'] },
   ],
   stay: [
-    { title: 'Textos', keys: ['title', 'body'] },
+    { title: 'Textos', keys: ['title', 'body'], open: true },
     { title: 'Hospedagens', keys: ['lodgings'] },
   ],
   dress_code: [
-    { title: 'Textos', keys: ['title', 'body', 'attire'] },
+    { title: 'Textos', keys: ['title', 'body', 'attire'], open: true },
     { title: 'Referências', keys: ['looks'] },
   ],
+  // These three are a heading and a paragraph each. They had no groups at all,
+  // so their fields sat loose while every other section arrived folded — the
+  // panel looked like it had forgotten to draw them.
+  rsvp: [{ title: 'Textos', keys: ['title', 'body', 'deadline'], open: true }],
+  gifts_intro: [{ title: 'Textos', keys: ['title', 'body'], open: true }],
+  messages_intro: [{ title: 'Textos', keys: ['title', 'body'], open: true }],
 }
 
 /**

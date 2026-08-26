@@ -70,10 +70,16 @@ export function ImageField({
   fieldKey,
   value,
   onChange,
+  stacked = false,
 }: {
   fieldKey: string
   value: string
   onChange: (next: string) => void
+  /**
+   * Puts "tirar" under the photo instead of beside it, for the narrow columns
+   * where a word alongside the thumbnail is width the rest of the row needs.
+   */
+  stacked?: boolean
 }) {
   const [picked, setPicked] = useState<File | null>(null)
   const input = useRef<HTMLInputElement>(null)
@@ -97,7 +103,7 @@ export function ImageField({
           said the same thing twice — the hover already offers it, and the only
           thing that genuinely is not the photo is taking it away. */}
       {value ? (
-        <div className="flex items-start gap-2">
+        <div className={`flex gap-2 ${stacked ? 'flex-col items-start' : 'items-start'}`}>
           <div className="relative inline-block">
             <button
               type="button"

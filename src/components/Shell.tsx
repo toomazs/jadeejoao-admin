@@ -1,4 +1,4 @@
-import { CalendarHeart, Gift, HandCoins, Image, LayoutDashboard, LogOut, MessageSquare, Users } from 'lucide-react'
+import { CalendarHeart, Gift, HandCoins, LayoutDashboard, LogOut, MessageSquare, Users } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router'
 
@@ -12,7 +12,6 @@ const NAV = [
   { to: '/presentes', label: 'Presentes', icon: Gift },
   { to: '/contribuicoes', label: 'Contribuições', icon: HandCoins },
   { to: '/conteudo', label: 'Conteúdo', icon: CalendarHeart },
-  { to: '/midia', label: 'Mídia', icon: Image },
 ]
 
 /**

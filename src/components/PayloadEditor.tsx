@@ -228,7 +228,13 @@ export function PayloadEditor({
           const loneObject = Boolean(lone && typeof lone === "object");
           return (
             <Accordion
-              key={group.title}
+              // Keyed by the section too. Two sections both have a group
+              // called "Textos", and on a bare title React reused the same
+              // accordion across the switch — carrying its open state over,
+              // so a section that should arrive open arrived however the
+              // previous one had been left.
+              key={`${path}.${group.title}`}
+              defaultOpen={group.open}
               title={group.title}
               subtitle={loneObject ? summarize(lone as Json) : undefined}
               onOpen={() => {

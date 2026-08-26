@@ -127,6 +127,54 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  /* The same sheet the site opens over the gifts, opening over the panel.
+     Kept in step with EXIT_MS in Modal.tsx: the element has to still be there
+     while it leaves. */
+  .modal-in {
+    animation: modal-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .modal-in::backdrop {
+    animation: modal-fade 0.26s ease-out both;
+  }
+
+  .modal-out {
+    animation: modal-out 0.22s ease-in both;
+  }
+  .modal-out::backdrop {
+    animation: modal-fade 0.22s ease-in reverse both;
+  }
+
+  @keyframes modal-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes modal-out {
+    from {
+      opacity: 1;
+      transform: none;
+    }
+    to {
+      opacity: 0;
+      transform: translateY(8px) scale(0.99);
+    }
+  }
+
+  @keyframes modal-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
   /* A row settling in after a save, the only motion the panel needs. */
   .row-in {
     animation: row-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;

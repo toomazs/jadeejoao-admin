@@ -1,14 +1,24 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { Button } from './primitives'
 
+/** Kept in step with the .modal-out animation in global.css. */
+const EXIT_MS = 220
+
 /**
- * Every dialog in the panel, built once.
+ * Every dialog in the panel, built once — and built the way the site builds
+ * its own.
  *
- * Focus is trapped and returned, Escape closes, and the page behind stops
- * scrolling — the things a native dialog would give and that hand-rolled
- * overlays keep forgetting.
+ * On a real <dialog> opened with showModal(), so the browser handles the focus
+ * trap, the inert background and Escape. This used to be a positioned div with
+ * a hand-written Tab cycle, which is a well-known way to get focus subtly
+ * wrong; the platform does it correctly and for free.
+ *
+ * It arrives and leaves like the gift sheet on the site: the same rise, the
+ * same blurred backdrop, the same easing. Callers mount and unmount it, so the
+ * exit has to finish before `onClose` reaches the parent — otherwise the parent
+ * removes the element mid-animation and the sheet vanishes instead of leaving.
  */
 export function Modal({
   title,
@@ -25,65 +35,65 @@ export function Modal({
   children: ReactNode
   width?: string
 }) {
-  const panel = useRef<HTMLDivElement>(null)
-  const restoreTo = useRef<HTMLElement | null>(null)
+  const ref = useRef<HTMLDialogElement>(null)
+  const [closing, setClosing] = useState(false)
+  const timer = useRef<number | undefined>(undefined)
 
-  useEffect(() => {
-    restoreTo.current = document.activeElement as HTMLElement
-    const overflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    // Focus lands inside so the keyboard is already in the dialog.
-    panel.current?.querySelector<HTMLElement>(
-      'input, select, textarea, button, [tabindex]:not([tabindex="-1"])',
-    )?.focus()
+  // A ref, not the state: state settles on the next render, so Escape followed
+  // quickly by a click on "fechar" both saw `closing` still false and each
+  // scheduled its own close.
+  const leaving = useRef(false)
 
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose()
-        return
-      }
-      if (event.key !== 'Tab' || !panel.current) return
-      // Keep Tab inside: escaping into the page behind a modal is how people
-      // end up typing into a form they cannot see.
-      const focusable = [
-        ...panel.current.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])',
-        ),
-      ].filter((el) => el.offsetParent !== null)
-      if (focusable.length === 0) return
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-      if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault()
-        first.focus()
-      } else if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last.focus()
-      }
+  const leave = useCallback(() => {
+    if (leaving.current) return
+    leaving.current = true
+    document.body.style.overflow = ''
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      onClose()
+      return
     }
-
-    window.addEventListener('keydown', onKey)
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = overflow
-      restoreTo.current?.focus()
-    }
+    setClosing(true)
+    timer.current = window.setTimeout(onClose, EXIT_MS)
   }, [onClose])
 
+  useEffect(() => {
+    const dialog = ref.current
+    if (!dialog) return
+    dialog.showModal()
+    // The page must not scroll behind the sheet.
+    document.body.style.overflow = 'hidden'
+    // Focus lands on the first thing there is to fill in, and only falls back
+    // to a button if there is nothing. A single selector would have picked
+    // whatever comes first in the DOM, which is the close button in the header
+    // — opening "Novo convidado" would put the cursor on "fechar".
+    const field = dialog.querySelector<HTMLElement>(
+      'input:not([type="hidden"]):not([disabled]), select, textarea, [contenteditable="true"]',
+    )
+    ;(field ?? dialog.querySelector<HTMLElement>('button:not([disabled])'))?.focus()
+    return () => {
+      document.body.style.overflow = ''
+      window.clearTimeout(timer.current)
+    }
+  }, [])
+
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-ink/50 px-4 py-8"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose()
+    <dialog
+      ref={ref}
+      aria-label={title}
+      // Escape fires this rather than closing outright, so it leaves the same
+      // way the close button makes it leave.
+      onCancel={(event) => {
+        event.preventDefault()
+        leave()
       }}
+      onClick={(event) => {
+        if (event.target === ref.current) leave()
+      }}
+      className={`m-auto w-full ${width} border border-olive-line bg-cream p-0 text-ink backdrop:bg-ink/55 backdrop:backdrop-blur-sm ${
+        closing ? 'modal-out' : 'modal-in'
+      }`}
     >
-      <div
-        ref={panel}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className={`w-full ${width} border border-olive-line bg-cream shadow-[0_24px_60px_-30px_rgba(26,24,24,0.7)]`}
-      >
+      <div className="max-h-[85svh] overflow-y-auto">
         <header className="flex items-start justify-between gap-3 border-b border-sand-line px-4 py-3">
           <div>
             <h2 className="font-display text-xl text-olive">{title}</h2>
@@ -93,7 +103,7 @@ export function Modal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={leave}
             aria-label="Fechar"
             className="shrink-0 cursor-pointer px-2 font-body text-sm text-dark-gray transition-colors hover:text-olive"
           >
@@ -109,7 +119,7 @@ export function Modal({
           </footer>
         ) : null}
       </div>
-    </div>
+    </dialog>
   )
 }
 

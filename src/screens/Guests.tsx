@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Crown, Download, Trash2, Upload, UserPlus } from 'lucide-react'
+import { Crown, Download, Pencil, Trash2, Upload, UserPlus } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 
 import { $api, problemDetail } from '../api/client'
@@ -249,6 +249,17 @@ export function Guests() {
               <Crown className="h-4 w-4" aria-hidden="true" />
             </button>
           ) : null}
+          {/* The name is still the obvious thing to click. This is for
+              whoever does not think to try it. */}
+          <button
+            type="button"
+            title="Editar convidado"
+            aria-label={`Editar ${r.fullName}`}
+            onClick={() => setEditing(r)}
+            className="cursor-pointer p-1 text-dark-gray/50 transition-colors hover:text-olive"
+          >
+            <Pencil className="h-4 w-4" aria-hidden="true" />
+          </button>
           <button
             type="button"
             title="Apagar convidado"

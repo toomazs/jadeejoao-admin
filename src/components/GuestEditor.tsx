@@ -119,6 +119,24 @@ export function GuestEditor({
     );
   };
 
+  /**
+   * People on the list who match what is being typed and are not already here.
+   *
+   * Accent-blind and limited, because this is a hint under a field and not a
+   * directory: past a handful it stops helping and starts being a list to read.
+   */
+  const jaExistem = (() => {
+    const q = companion.trim();
+    if (q.length < 2) return [];
+    const fold = (t: string) =>
+      t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    return allRows
+      .filter(
+        (r) => r.groupId !== row.groupId && fold(r.fullName).includes(fold(q)),
+      )
+      .slice(0, 6);
+  })();
+
   /** The other invitations, one entry each, named after their label. */
   const invitations = [
     ...new Map(allRows.map((r) => [r.groupId, r.groupLabel])).entries(),
@@ -422,6 +440,42 @@ export function GuestEditor({
                   {addCompanion.isPending ? "Acrescentando…" : "Acrescentar"}
                 </Button>
               </div>
+
+              {/* Typing a name creates somebody; picking one from here moves
+                  somebody who already exists. Both are "acrescentar alguém" to
+                  the couple, and which one it is depends on whether the person
+                  is already on the list — a question the panel can answer
+                  itself instead of asking. */}
+              {jaExistem.length > 0 ? (
+                <ul className="mt-1 border border-olive-line bg-cream">
+                  {jaExistem.map((person) => (
+                    <li key={person.guestId}>
+                      <button
+                        type="button"
+                        disabled={merge.isPending}
+                        onClick={() => {
+                          setError("");
+                          merge.mutate(
+                            {
+                              params: { path: { group_id: row.groupId } },
+                              body: { guest_id: person.guestId },
+                            },
+                            { onSuccess: onSaved, onError: fail },
+                          );
+                        }}
+                        className="flex w-full cursor-pointer items-center justify-between gap-2 px-3 py-2 text-left font-body text-sm text-ink transition-colors hover:bg-veil hover:text-olive disabled:opacity-40"
+                      >
+                        <span className="min-w-0 truncate">
+                          {person.fullName}
+                        </span>
+                        <span className="shrink-0 font-body text-xs text-dark-gray">
+                          já está na lista · trazer
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           ) : null}
         </div>

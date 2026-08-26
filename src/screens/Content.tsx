@@ -164,8 +164,16 @@ export function Content() {
       content: { sections: merged.filter((s) => s.enabled !== false) },
       // The unsaved gift list too — it is what the Presentes section draws.
       gifts: { gifts: previewGifts },
+      // And the galleries, in the shape the public feed endpoint returns, so
+      // a photo swapped here appears under the chapter without being saved.
+      instagram: galleries
+        ? {
+            bride: { configured: true, posts: galleries.bride },
+            groom: { configured: true, posts: galleries.groom },
+          }
+        : undefined,
     };
-  }, [all, slug, draft, previewGifts]);
+  }, [all, slug, draft, previewGifts, galleries]);
 
   const dirtyGalleries = galleries
     ? (["bride", "groom"] as const).filter(
@@ -177,12 +185,15 @@ export function Content() {
   const dirtyGifts = gifts
     ? JSON.stringify(gifts) !== JSON.stringify(storedGifts)
     : false;
-  const dirty =
-    (draft && stored
+  // Only while the draft is of the section on screen. Switching tab changes
+  // `stored` on the spot and `draft` one render later, so for that one render
+  // the panel was comparing one section against another and calling the
+  // difference unsaved work — the bar flashed on every switch.
+  const dirtySection =
+    draft?.slug === slug && stored
       ? JSON.stringify(draft) !== JSON.stringify(stored)
-      : false) ||
-    dirtyGalleries.length > 0 ||
-    dirtyGifts;
+      : false;
+  const dirty = dirtySection || dirtyGalleries.length > 0 || dirtyGifts;
 
   const submit = async () => {
     if (!draft || !dirty || uploading) return;
@@ -273,7 +284,7 @@ export function Content() {
 
     // A section may be untouched while a gallery is not — the bar covers both,
     // so saving one must not write the other back over itself.
-    if (JSON.stringify(draft) === JSON.stringify(stored)) {
+    if (!dirtySection) {
       setSaved("Salvo. O site já está com essa versão.");
       void queryClient.invalidateQueries();
       return;

@@ -28,6 +28,8 @@ export interface Draft {
   content?: unknown
   /** The public `/gifts` shape. */
   gifts?: unknown
+  /** The chapter galleries by person, in the public `/instagram/{person}` shape. */
+  instagram?: Record<string, unknown>
 }
 
 interface SitePreviewProps {

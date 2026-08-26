@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
 import { createContext, use } from 'react'
 import type { ReactNode } from 'react'
 
+import { FocusContext } from './PayloadEditor'
 import { ImageField } from './fields'
 import { MarkdownField } from './MarkdownField'
 import {
@@ -11,7 +12,6 @@ import {
   MoneyField,
   Toggle,
   centavosToReais,
-  reaisToCentavos,
 } from './ui'
 
 /**
@@ -46,6 +46,8 @@ export interface Gift {
   sort?: number
   /** Read-only, from the API — what guests have actually sent. */
   confirmed_centavos?: number
+  /** Read-only: declared and still waiting for the couple to confirm it. */
+  declared_centavos?: number
   /** Read-only: quotas minus the ones already taken. The API works it out. */
   units_left?: number
 }
@@ -94,6 +96,8 @@ export function GiftList({
   gifts: Gift[]
   onChange: (next: Gift[]) => void
 }) {
+  const focusPreview = use(FocusContext)
+
   const update = (at: number, patch: Partial<Gift>) =>
     onChange(gifts.map((gift, i) => (i === at ? { ...gift, ...patch } : gift)))
 
@@ -128,6 +132,11 @@ export function GiftList({
                   title={gift.title || 'Presente sem nome'}
                   subtitle={summarize(gift)}
                   defaultOpen={isNew(gift)}
+                  // A gift the API has never seen has no card on the page to
+                  // scroll to; the section itself is the closest thing.
+                  onOpen={() =>
+                    focusPreview?.(isNew(gift) ? 'gifts_intro' : `gift-${gift.gift_id}`)
+                  }
                   right={
                     <div className="flex items-center">
                       <button
@@ -253,14 +262,14 @@ function GiftFields({
         <>
           <MoneyField
             label="Meta"
-            value={centavosToReais(gift.goal_centavos)}
-            onChange={(reais) => update(at, { goal_centavos: reaisToCentavos(reais) })}
+            centavos={gift.goal_centavos}
+            onChange={(goal_centavos) => update(at, { goal_centavos })}
           />
           <MoneyField
             label="Valor da cota"
             hint="Vazio: o convidado escolhe quanto dar."
-            value={centavosToReais(gift.quota_centavos)}
-            onChange={(reais) => update(at, { quota_centavos: reaisToCentavos(reais) })}
+            centavos={gift.quota_centavos}
+            onChange={(quota_centavos) => update(at, { quota_centavos })}
           />
           <Field
             label="Quantas cotas"

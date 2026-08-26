@@ -107,18 +107,25 @@ function TextInput({
   value,
   onChange,
   onFocus,
+  plain,
 }: {
   onFocus?: () => void;
+  /** Forces the plain box, for text the site prints without reading it. */
+  plain?: boolean;
   keyName: string;
   value: string;
   onChange: (v: string) => void;
 }) {
   const prose =
-    LONG_TEXT.test(keyName) || value.length > 90 || value.includes("\n");
+    !plain &&
+    (LONG_TEXT.test(keyName) || value.length > 90 || value.includes("\n"));
   // The site renders these through Markdown, so the panel should offer the
   // formatting rather than leaving the couple to type asterisks — and should
   // show what those asterisks will become.
-  if (prose || SHORT_MARKDOWN.test(keyName) || /\*\*|\[.+\]\(/.test(value)) {
+  if (
+    !plain &&
+    (prose || SHORT_MARKDOWN.test(keyName) || /\*\*|\[.+\]\(/.test(value))
+  ) {
     return (
       <MarkdownField value={value} onChange={onChange} onFocus={onFocus} />
     );

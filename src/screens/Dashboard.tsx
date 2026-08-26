@@ -221,7 +221,7 @@ export function Dashboard() {
           title="Presentes"
           actions={
             <Link
-              to="/conteudo"
+              to="/conteudo?secao=gifts_intro"
               className="font-body text-sm text-olive underline underline-offset-4"
             >
               editar

@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router";
 
 import { $api, problemDetail } from "../api/client";
 import {
@@ -32,7 +33,12 @@ type Section = Record<string, unknown> & { slug: string; enabled?: boolean };
  * thing the panel exists to prevent.
  */
 export function Content() {
-  const [slug, setSlug] = useState("hero");
+  // The tab can be asked for from elsewhere — the dashboard links straight to
+  // the gifts rather than dropping the couple on Abertura to find them.
+  const [params, setParams] = useSearchParams();
+  const slug = params.get("secao") ?? "hero";
+  const setSlug = (next: string) =>
+    setParams(next === "hero" ? {} : { secao: next }, { replace: true });
   const [draft, setDraft] = useState<Section | null>(null);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
@@ -134,6 +140,13 @@ export function Content() {
       (gifts ?? storedGifts)
         .filter((g) => g.active !== false)
         .map((gift) => {
+          // The totals are the API's to report and a gift it has never seen
+          // has none — the card divided by them and drew "R$ NaN".
+          gift = {
+            confirmed_centavos: 0,
+            declared_centavos: 0,
+            ...gift,
+          };
           if (gift.max_units == null) return gift;
           const before = storedGifts.find((g) => g.gift_id === gift.gift_id);
           const taken = Math.max(

@@ -5,7 +5,14 @@ import { createContext, use } from "react";
 
 import { MarkdownField } from "./MarkdownField";
 import { Accordion, Button, Checkbox, DateField } from "./ui";
-import { FIELD_ANCHOR, FIELD_HINT, FIELD_PT, SECTION_GROUPS } from "../lib/labels-fields";
+import {
+  FIELD_ANCHOR,
+  FIELD_HINT,
+  FIELD_ONLY_IF,
+  FIELD_PT,
+  LIST_ITEM_ANCHOR,
+  SECTION_GROUPS,
+} from "../lib/labels-fields";
 
 /**
  * An editor that reads the payload rather than a hand-written form per section.
@@ -58,6 +65,8 @@ interface EditorProps {
    */
   shape?: string[];
   optional?: ReadonlySet<string>;
+  /** An empty value of the right type per key, for the ones not filled in. */
+  blanks?: Record<string, Json>;
 }
 
 /**
@@ -138,6 +147,7 @@ export function PayloadEditor({
   saving,
   shape,
   optional,
+  blanks,
 }: EditorProps) {
   // Any accordion in here can ask the preview to show what it opened.
   const focusPreview = use(FocusContext);
@@ -299,22 +309,37 @@ export function PayloadEditor({
   return (
     <div className="grid gap-3">
       {ordered.map((key) => {
+        // A field that waits on another one stays out of the way until that
+        // one says yes.
+        const gate = FIELD_ONLY_IF[`${anchorPath(path)}.${key}`];
+        if (gate && !value[gate]) return null;
+
+        const blank = blanks?.[key] ?? "";
         if (!(key in value)) {
-          return (
-            <AbsentField
-              key={key}
-              label={humanize(key)}
-              onAdd={() => onChange({ ...value, [key]: "" })}
-            />
-          );
+          // A checkbox has nothing to add: not ticked IS an answer, and asking
+          // the couple to add it first only made them click twice.
+          if (typeof blank !== "boolean") {
+            return (
+              <AbsentField
+                key={key}
+                label={humanize(key)}
+                onAdd={() => onChange({ ...value, [key]: blank })}
+              />
+            );
+          }
         }
-        const child = value[key];
+        const child = key in value ? value[key] : blank;
         const childPath = path ? `${path}.${key}` : key;
         // Removable when a sibling gets by without it, or when it is sitting
         // there empty — which is what an accidental "adicionar" leaves behind,
         // and what the couple had no way to undo.
+        // Never a checkbox: unticked already says no, so a bin beside it would
+        // offer to remove an answer the couple has already given. And never a
+        // key that is not there — the bin would do nothing.
         const removable =
-          Boolean(optional?.has(key)) || child === "";
+          key in value &&
+          typeof child !== "boolean" &&
+          (Boolean(optional?.has(key)) || child === "");
         const editor = (
           <PayloadEditor
             value={child}
@@ -477,15 +502,35 @@ function ArrayEditor({
   const optional = new Set(
     shape.filter((key) => items.some((item) => isEntry(item) && !(key in item))),
   );
+  // What an empty one of each looks like. Adding a missing key as `""` turned
+  // a checkbox into a blank string, which is neither true nor false and is not
+  // what the API is holding a boolean for.
+  const blanks: Record<string, Json> = {};
+  for (const key of shape) {
+    for (const item of items) {
+      if (!isEntry(item) || !(key in item)) continue;
+      const sample = item[key];
+      blanks[key] =
+        typeof sample === "boolean"
+          ? false
+          : typeof sample === "number"
+            ? 0
+            : Array.isArray(sample)
+              ? []
+              : sample && typeof sample === "object"
+                ? {}
+                : "";
+      break;
+    }
+  }
 
   // Only the album has a frame per entry. Every other list is one block on the
   // page, so its entries all point at the block — without this, opening the
   // first item of the programme scrolled the site to the first album photo.
   const listPath = anchorPath(path);
+  const perItem = LIST_ITEM_ANCHOR[listPath];
   const anchorAt = (index: number) =>
-    listPath === "our_story.moments"
-      ? `moment-${index}`
-      : FIELD_ANCHOR[listPath];
+    perItem ? `${perItem}-${index}` : FIELD_ANCHOR[listPath];
 
   const blankLike = (sample: Json | undefined): Json => {
     if (sample === undefined) return "";
@@ -550,6 +595,7 @@ function ArrayEditor({
             path={path}
             shape={shape}
             optional={optional}
+            blanks={blanks}
             onChange={(next) =>
               onChange(items.map((old, i) => (i === index ? next : old)))
             }

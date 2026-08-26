@@ -155,4 +155,37 @@ export const FIELD_ANCHOR: Record<string, string> = {
   'big_day.programme': 'big_day',
   'stay.lodgings': 'stay',
   'dress_code.looks': 'dress_code',
+  // The name and the portrait share a scene, and it is not the bio's — click
+  // back into the name and the preview should come back with you.
+  'our_story.bride.name': 'chapter-bride',
+  'our_story.groom.name': 'chapter-groom',
+  'our_story.bride.photo_url': 'chapter-bride',
+  'our_story.groom.photo_url': 'chapter-groom',
+  'our_story.bride.instagram': 'chapter-bride',
+  'our_story.groom.instagram': 'chapter-groom',
+}
+
+/**
+ * Lists whose entries are addressable one by one, and the id prefix the site
+ * gives them.
+ *
+ * Without an entry here a list points at its section, which is right for a
+ * block that reads as one thing and wrong for a column of separate ones —
+ * opening "Para eles" landed on the top of Dress code, showing "Para elas".
+ */
+export const LIST_ITEM_ANCHOR: Record<string, string> = {
+  'our_story.moments': 'moment',
+  'dress_code.looks': 'look',
+  'big_day.programme': 'programme',
+  'stay.lodgings': 'lodging',
+}
+
+/**
+ * Fields that only mean something while a sibling is on.
+ *
+ * A hotel card never draws a logo — only the search platforms do. Offering the
+ * field anyway invites the couple to upload one and watch nothing happen.
+ */
+export const FIELD_ONLY_IF: Record<string, string> = {
+  'stay.lodgings.logo_url': 'platform',
 }

@@ -154,10 +154,8 @@ export function PayloadEditor({
     // A chapter is several screens tall and shows one scene at a time, so the
     // accordion's anchor cannot also be the bio's — clicking into the bio has
     // to move the preview again, further down, or she is editing text that is
-    // not on screen. Scoped to the last two segments so a `bio` here never
-    // borrows an anchor meant for one somewhere else.
-    const scoped = path.split(".").slice(-2).join(".");
-    const fieldAnchor = FIELD_ANCHOR[scoped];
+    // not on screen.
+    const fieldAnchor = FIELD_ANCHOR[path];
     return (
       <TextInput
         keyName={key}
@@ -224,8 +222,17 @@ export function PayloadEditor({
               title={group.title}
               subtitle={loneObject ? summarize(lone as Json) : undefined}
               onOpen={() => {
-                const anchor = inside.map((k) => FIELD_ANCHOR[k]).find(Boolean)
-                if (anchor) focusPreview?.(anchor)
+                // `path` is the section slug here, and the anchor map is
+                // keyed by the whole path — a bare `title` belongs to half the
+                // sections and would answer for all of them.
+                // Falling back to the section itself, which is always an
+                // anchor on the page: every group then puts something on
+                // screen, instead of the ones without a mapped field leaving
+                // the preview wherever it last happened to be.
+                const anchor =
+                  inside.map((k) => FIELD_ANCHOR[`${path}.${k}`]).find(Boolean) ??
+                  path
+                focusPreview?.(anchor)
               }}
             >
               {/* A group holding one object IS that object: unwrap it, or the
@@ -459,12 +466,11 @@ function ArrayEditor({
     shape.filter((key) => items.some((item) => isEntry(item) && !(key in item))),
   );
 
-  const listKey = path.split(".").pop() ?? "";
   // Only the album has a frame per entry. Every other list is one block on the
   // page, so its entries all point at the block — without this, opening the
   // first item of the programme scrolled the site to the first album photo.
   const anchorAt = (index: number) =>
-    listKey === "moments" ? `moment-${index}` : FIELD_ANCHOR[listKey];
+    path === "our_story.moments" ? `moment-${index}` : FIELD_ANCHOR[path];
 
   const blankLike = (sample: Json | undefined): Json => {
     if (sample === undefined) return "";

@@ -134,19 +134,25 @@ export const SECTION_GROUPS: Record<string, FieldGroup[]> = {
  * Opening "O noivo" should put his chapter on screen; without this the preview
  * stays wherever it was and the couple scrolls a second window by hand to find
  * what they just opened.
+ *
+ * Keys are FULL PATHS, section included, and that is not decoration. Half the
+ * sections own a `title` and a `body`. Keyed by the bare field name, every one
+ * of them resolved to the album's — so opening "Textos" in Como chegar scrolled
+ * the site up to "Vamos te mostrar um pouco da nossa história". A field only
+ * knows where it lives once you say which section is asking.
  */
 export const FIELD_ANCHOR: Record<string, string> = {
-  bride: 'chapter-bride',
-  groom: 'chapter-groom',
-  'bride.bio': 'chapter-bride-bio',
-  'groom.bio': 'chapter-groom-bio',
-  moments: 'story_album',
-  title: 'story-album-title',
-  letter_from_groom: 'letters',
-  letter_from_bride: 'letters',
-  body: 'invitation',
-  announcement: 'announcement',
-  programme: 'big_day',
-  lodgings: 'stay',
-  looks: 'dress_code',
+  'our_story.bride': 'chapter-bride',
+  'our_story.groom': 'chapter-groom',
+  'our_story.bride.bio': 'chapter-bride-bio',
+  'our_story.groom.bio': 'chapter-groom-bio',
+  'our_story.moments': 'story_album',
+  'our_story.title': 'story-album-title',
+  'our_story.letter_from_groom': 'letters',
+  'our_story.letter_from_bride': 'letters',
+  'our_story.body': 'invitation',
+  'our_story.announcement': 'announcement',
+  'big_day.programme': 'big_day',
+  'stay.lodgings': 'stay',
+  'dress_code.looks': 'dress_code',
 }

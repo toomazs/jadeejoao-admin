@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Filter, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Filter, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
@@ -197,27 +197,27 @@ export function DataTable<T>({
         </p>
 
         {pages > 1 ? (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               aria-label="Página anterior"
               disabled={at === 0}
               onClick={() => setPage(at - 1)}
-              className="min-h-8 cursor-pointer px-2 font-body text-sm text-dark-gray transition-colors hover:text-olive disabled:cursor-not-allowed disabled:opacity-30"
+              className="flex min-h-10 min-w-10 cursor-pointer items-center justify-center border border-olive-line text-dark-gray transition-colors hover:border-olive hover:text-olive disabled:cursor-not-allowed disabled:opacity-30"
             >
-              ‹
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             </button>
-            <span className="font-body text-xs text-dark-gray">
-              {at + 1} / {pages}
+            <span className="font-body text-sm text-dark-gray tabular-nums">
+              {at + 1} de {pages}
             </span>
             <button
               type="button"
               aria-label="Próxima página"
               disabled={at >= pages - 1}
               onClick={() => setPage(at + 1)}
-              className="min-h-8 cursor-pointer px-2 font-body text-sm text-dark-gray transition-colors hover:text-olive disabled:cursor-not-allowed disabled:opacity-30"
+              className="flex min-h-10 min-w-10 cursor-pointer items-center justify-center border border-olive-line text-dark-gray transition-colors hover:border-olive hover:text-olive disabled:cursor-not-allowed disabled:opacity-30"
             >
-              ›
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
         ) : null}

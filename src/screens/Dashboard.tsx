@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 
 import { $api } from '../api/client'
 import { ScreenTitle } from '../components/Shell'
-import { Card, Chip, Empty, Stat } from '../components/ui'
+import { Card, Empty, Stat } from '../components/ui'
 import { CATEGORY_PT, SIDE_PT, money } from '../lib/labels'
 
 /**
@@ -53,13 +53,45 @@ export function Dashboard() {
     return Object.entries(tally).sort((a, b) => b[1] - a[1])
   }, [people])
 
-  const party = useMemo(
-    () =>
-      people
-        .filter((p) => p.ceremony_role && p.ceremony_role !== 'Convidado')
-        .sort((a, b) => (a.ceremony_role ?? '').localeCompare(b.ceremony_role ?? '', 'pt-BR')),
-    [people],
-  )
+  /**
+   * The wedding party, grouped by what each person is there to do.
+   *
+   * A flat row of twenty-two names and twenty-two little labels was a wall to
+   * read: the roles were repeated once per person and the shape of the thing —
+   * two people getting married, their parents, their padrinhos — was nowhere in
+   * it. Grouped, the role is said once and the names sit under it.
+   */
+  const party = useMemo(() => {
+    const byRole = new Map<string, string[]>()
+    for (const person of people) {
+      const role = person.ceremony_role
+      if (!role || role === 'Convidado') continue
+      byRole.set(role, [...(byRole.get(role) ?? []), person.full_name])
+    }
+    // The order of the day, not the alphabet: the couple, the people who made
+    // them, the ones standing beside them, then everyone else.
+    const ORDER = [
+      'Noiva',
+      'Noivo',
+      'Mãe da noiva',
+      'Pai da noiva',
+      'Mãe do noivo',
+      'Pai do noivo',
+      'Madrinha',
+      'Padrinho',
+      'Dama de honra',
+      'Pajem',
+      'Celebrante',
+    ]
+    const rank = (role: string) => {
+      const at = ORDER.indexOf(role)
+      return at === -1 ? ORDER.length : at
+    }
+    return [...byRole.entries()]
+      .map(([role, names]) => ({ role, names: names.sort((a, b) => a.localeCompare(b, 'pt-BR')) }))
+      .sort((a, b) => rank(a.role) - rank(b.role) || a.role.localeCompare(b.role, 'pt-BR'))
+  }, [people])
+  const partySize = party.reduce((n, group) => n + group.names.length, 0)
 
   const allGifts = gifts.data?.gifts ?? []
   const received = allGifts.reduce((sum, g) => sum + (g.confirmed_centavos ?? 0), 0)
@@ -137,17 +169,37 @@ export function Dashboard() {
       </div>
 
       {party.length > 0 ? (
-        <Card title={`Padrinhos, madrinhas e companhia · ${party.length}`} className="mt-4">
-          <ul className="flex flex-wrap gap-2 px-4 py-4">
-            {party.map((person) => (
-              <li key={person.guest_id} className="font-body text-sm text-ink">
-                {person.full_name}
-                <span className="ml-1.5 align-middle">
-                  <Chip>{person.ceremony_role}</Chip>
-                </span>
-              </li>
+        <Card
+          title={`Quem tem papel na cerimônia · ${partySize}`}
+          className="mt-4"
+          actions={
+            <Link
+              to="/convidados"
+              className="font-body text-sm text-olive underline underline-offset-4"
+            >
+              editar
+            </Link>
+          }
+        >
+          <div className="grid gap-3 px-4 py-4 sm:grid-cols-2 xl:grid-cols-3">
+            {party.map(({ role, names }) => (
+              <div key={role} className="border-l-2 border-gold-sand pl-3">
+                <p className="font-body text-xs tracking-[0.12em] text-olive uppercase">
+                  {role}
+                  {names.length > 1 ? (
+                    <span className="text-dark-gray/60"> · {names.length}</span>
+                  ) : null}
+                </p>
+                <ul className="mt-1">
+                  {names.map((name) => (
+                    <li key={name} className="font-body text-sm text-ink">
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         </Card>
       ) : null}
 

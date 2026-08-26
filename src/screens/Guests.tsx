@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Crown, Download, Trash2, Upload } from 'lucide-react'
+import { Crown, Download, Trash2, Upload, UserPlus } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 
 import { $api, problemDetail } from '../api/client'
@@ -280,6 +280,30 @@ export function Guests() {
                 if (file) void importFile(file)
               }}
             />
+            <Button
+              onClick={() =>
+                // A blank row: the editor takes the absence of an id as
+                // "this person does not exist yet".
+                setEditing({
+                  groupId: '',
+                  groupLabel: '',
+                  guestId: '',
+                  fullName: '',
+                  isPrimary: true,
+                  attending: 'pending',
+                  addedByGuest: false,
+                  circle: '',
+                  ceremonyRole: '',
+                  notes: '',
+                  groupSize: 1,
+                })
+              }
+            >
+              <span className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4" aria-hidden="true" />
+                Novo convidado
+              </span>
+            </Button>
             <Button tone="quiet" onClick={() => void exportCsv()}>
               <span className="flex items-center gap-2">
                 <Download className="h-4 w-4" aria-hidden="true" />

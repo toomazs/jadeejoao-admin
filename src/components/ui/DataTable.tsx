@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, Filter, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 
 import { Checkbox } from './controls'
@@ -40,6 +41,7 @@ export function DataTable<T>({
   loading,
   empty = 'Nada aqui.',
   minWidth = '52rem',
+  perPage = 25,
 }: {
   rows: T[]
   columns: Column<T>[]
@@ -47,10 +49,13 @@ export function DataTable<T>({
   loading?: boolean
   empty?: ReactNode
   minWidth?: string
+  /** Rows on one page. The guest list is a hundred and twenty-two of them. */
+  perPage?: number
 }) {
   const [sort, setSort] = useState<Sort>(null)
   const [filters, setFilters] = useState<Record<string, Set<string>>>({})
   const [openFilter, setOpenFilter] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
 
   const valueOf = (row: T, column: Column<T>): string => {
     if (column.value) return column.value(row)
@@ -91,6 +96,13 @@ export function DataTable<T>({
     )
 
   const active = Object.values(filters).reduce((n, set) => n + (set.size > 0 ? 1 : 0), 0)
+
+  const pages = Math.max(1, Math.ceil(shown.length / perPage))
+  // Filtering down to fewer rows than the current page holds would otherwise
+  // leave the table showing an empty page of a list that has results.
+  const at = Math.min(page, pages - 1)
+  const from = at * perPage
+  const visible = shown.slice(from, from + perPage)
 
   return (
     <div>
@@ -162,7 +174,7 @@ export function DataTable<T>({
                 </td>
               </tr>
             ) : (
-              shown.map((row) => (
+              visible.map((row) => (
                 <tr key={rowKey(row)} className="border-t border-sand-line hover:bg-veil">
                   {columns.map((column) => (
                     <td key={column.key} className={`px-4 py-2.5 ${column.className ?? ''}`}>
@@ -176,11 +188,40 @@ export function DataTable<T>({
         </table>
       </div>
 
-      <p className="mt-2 font-body text-xs text-dark-gray">
-        {shown.length === rows.length
-          ? `${rows.length} no total`
-          : `${shown.length} de ${rows.length}`}
-      </p>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        <p className="font-body text-xs text-dark-gray">
+          {shown.length === 0
+            ? 'nenhuma linha'
+            : `${from + 1}–${Math.min(from + perPage, shown.length)} de ${shown.length}`}
+          {shown.length !== rows.length ? ` (de ${rows.length})` : ''}
+        </p>
+
+        {pages > 1 ? (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              aria-label="Página anterior"
+              disabled={at === 0}
+              onClick={() => setPage(at - 1)}
+              className="min-h-8 cursor-pointer px-2 font-body text-sm text-dark-gray transition-colors hover:text-olive disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              ‹
+            </button>
+            <span className="font-body text-xs text-dark-gray">
+              {at + 1} / {pages}
+            </span>
+            <button
+              type="button"
+              aria-label="Próxima página"
+              disabled={at >= pages - 1}
+              onClick={() => setPage(at + 1)}
+              className="min-h-8 cursor-pointer px-2 font-body text-sm text-dark-gray transition-colors hover:text-olive disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              ›
+            </button>
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -201,11 +242,40 @@ function ColumnFilter({
   onChange: (next: Set<string>) => void
 }) {
   const wrapper = useRef<HTMLDivElement>(null)
+  const panel = useRef<HTMLDivElement>(null)
+  const [spot, setSpot] = useState<{ top: number; left: number } | null>(null)
+
+  // Where the panel goes, measured from the funnel each time it opens. It is
+  // in a portal now, so it has no parent to be positioned against.
+  useEffect(() => {
+    if (!open) {
+      setSpot(null)
+      return
+    }
+    const place = () => {
+      const rect = wrapper.current?.getBoundingClientRect()
+      if (!rect) return
+      setSpot({
+        top: rect.bottom + 4,
+        // Nudged back inside when the column is near the right edge.
+        left: Math.min(rect.left, window.innerWidth - 224),
+      })
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open) return
     const onDocClick = (event: MouseEvent) => {
-      if (!wrapper.current?.contains(event.target as Node)) onClose()
+      const target = event.target as Node
+      if (wrapper.current?.contains(target) || panel.current?.contains(target)) return
+      onClose()
     }
     document.addEventListener('mousedown', onDocClick)
     return () => document.removeEventListener('mousedown', onDocClick)
@@ -226,24 +296,36 @@ function ColumnFilter({
         <Filter className="h-3.5 w-3.5" aria-hidden="true" />
       </button>
 
-      {open ? (
-        <div className="absolute left-0 z-20 mt-1 max-h-64 w-52 overflow-y-auto border border-olive-line bg-cream p-2 shadow-[0_18px_40px_-24px_rgba(26,24,24,0.6)]">
-          {options.map((option) => (
-            <div key={option} className="px-1 py-1">
-              <Checkbox
-                checked={chosen.has(option)}
-                onChange={(on) => {
-                  const next = new Set(chosen)
-                  if (on) next.add(option)
-                  else next.delete(option)
-                  onChange(next)
-                }}
-                label={option}
-              />
-            </div>
-          ))}
-        </div>
-      ) : null}
+      {/* In a portal, fixed to where the funnel is. The table scrolls
+          horizontally, and a scroll container clips whatever is inside it — so
+          an absolutely positioned panel was cut off by the edge of the table.
+          Filtering down to two rows made the box short enough to cut off the
+          panel that had just done the filtering. */}
+      {open && spot
+        ? createPortal(
+            <div
+              ref={panel}
+              style={{ top: spot.top, left: spot.left }}
+              className="fixed z-40 max-h-64 w-52 overflow-y-auto border border-olive-line bg-cream p-2 shadow-[0_18px_40px_-24px_rgba(26,24,24,0.6)]"
+            >
+              {options.map((option) => (
+                <div key={option} className="px-1 py-1">
+                  <Checkbox
+                    checked={chosen.has(option)}
+                    onChange={(on) => {
+                      const next = new Set(chosen)
+                      if (on) next.add(option)
+                      else next.delete(option)
+                      onChange(next)
+                    }}
+                    label={option}
+                  />
+                </div>
+              ))}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   )
 }

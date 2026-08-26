@@ -76,14 +76,12 @@ const GROUPS = [
   {
     kind: 'pix' as const,
     title: 'Metas por PIX',
-    hint: 'Os cards de cima, com a barra de quanto já veio.',
     add: 'Adicionar meta',
     holds: (gift: Gift) => !isList(gift),
   },
   {
     kind: 'link' as const,
     title: 'Listas de loja',
-    hint: 'A fileira de baixo, em "Ou escolha nas nossas listas".',
     add: 'Adicionar lista',
     holds: isList,
   },
@@ -119,8 +117,6 @@ export function GiftList({
             <p className="font-body text-xs tracking-[0.1em] text-dark-gray uppercase">
               {group.title}
             </p>
-            <p className="mt-0.5 font-body text-xs text-dark-gray/70">{group.hint}</p>
-
             <div className="mt-2 grid gap-2">
               {mine.length === 0 ? (
                 <p className="font-body text-sm text-dark-gray italic">nenhum ainda</p>

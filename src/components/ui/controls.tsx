@@ -15,11 +15,19 @@ import type { ReactNode } from 'react'
 
 export type ChipTone = 'yes' | 'no' | 'waiting' | 'neutral' | 'accent'
 
+/**
+ * Filled, not outlined.
+ *
+ * A column of outlines all one width reads as a column of empty boxes: the
+ * answer is the thin ring around it, and at a glance every row looks the same.
+ * Filled, the difference between "vai" and "não vai" is the block of colour,
+ * legible before anybody reads a word.
+ */
 const CHIP: Record<ChipTone, string> = {
-  yes: 'border-olive text-olive',
-  no: 'border-terracotta text-terracotta',
-  waiting: 'border-gold-sand text-dark-gray',
-  neutral: 'border-olive-line text-dark-gray',
+  yes: 'border-deep-olive bg-deep-olive text-cream',
+  no: 'border-terracotta bg-terracotta text-cream',
+  waiting: 'border-gold-sand bg-gold-sand text-ink',
+  neutral: 'border-sand-line bg-sand-line text-dark-gray',
   accent: 'border-olive bg-olive text-cream',
 }
 

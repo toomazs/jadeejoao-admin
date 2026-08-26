@@ -155,8 +155,12 @@ export function Guests() {
           >
             {r.fullName}
           </button>
+          {/* A chip, not gold text on cream: at that contrast the padrinhos and
+              madrinhas were there and nobody could pick them out. */}
           {r.ceremonyRole && r.ceremonyRole !== 'Convidado' ? (
-            <span className="ml-2 font-body text-xs text-gold-sand">{r.ceremonyRole}</span>
+            <span className="ml-2 align-middle">
+              <Chip tone="accent">{r.ceremonyRole}</Chip>
+            </span>
           ) : null}
           {r.addedByGuest ? (
             <span className="ml-2 font-body text-xs text-dark-gray">· trazido</span>
@@ -168,13 +172,21 @@ export function Guests() {
     {
       key: 'invitation',
       header: 'Convite',
-      value: (r) => r.groupLabel,
-      cell: (r) => (
-        <span className="font-body text-sm text-dark-gray">
-          {r.groupLabel}
-          {r.groupSize > 1 ? <span className="ml-1 text-xs">({r.groupSize})</span> : null}
-        </span>
-      ),
+      // Only when the invitation says something the name does not. Everyone
+      // starts alone in their own invitation, labelled with their own name, so
+      // the column was repeating the one beside it a hundred and twenty-two
+      // times. It earns its place when somebody is brought along.
+      value: (r) => (r.groupSize > 1 ? r.groupLabel : 'só a pessoa'),
+      filterable: true,
+      cell: (r) =>
+        r.groupSize > 1 ? (
+          <span className="font-body text-sm text-dark-gray">
+            {r.groupLabel}
+            <span className="ml-1 text-xs">({r.groupSize} pessoas)</span>
+          </span>
+        ) : (
+          <span className="font-body text-sm text-dark-gray/50">só</span>
+        ),
     },
     {
       key: 'attending',

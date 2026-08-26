@@ -8,6 +8,8 @@ import {
   PickContext,
 } from "../components/PayloadEditor";
 import { ScreenTitle } from "../components/Shell";
+import { ChapterPhotos, GalleryContext } from "../components/ChapterPhotos";
+import type { ChapterPhoto } from "../components/ChapterPhotos";
 import { SitePreview } from "../components/SitePreview";
 import type { Draft } from "../components/SitePreview";
 import { Notice, SaveBar, shakeSaveBar, Tabs, Toggle } from "../components/ui";
@@ -49,6 +51,36 @@ export function Content() {
   const sections = $api.useQuery("get", "/api/v1/admin/sections");
   const save = $api.useMutation("put", "/api/v1/admin/sections/{slug}");
 
+  // The two galleries under the chapters. They are files in the bucket rather
+  // than part of any section, but they are edited inside "A noiva" and "O
+  // noivo", so this screen carries them and the one save bar covers them too.
+  const bride = $api.useQuery("get", "/api/v1/admin/instagram/{person}", {
+    params: { path: { person: "bride" } },
+  });
+  const groom = $api.useQuery("get", "/api/v1/admin/instagram/{person}", {
+    params: { path: { person: "groom" } },
+  });
+  const saveGallery = $api.useMutation(
+    "put",
+    "/api/v1/admin/instagram/{person}",
+  );
+
+  const storedGalleries = useMemo(
+    () => ({
+      bride: (bride.data?.posts ?? []) as ChapterPhoto[],
+      groom: (groom.data?.posts ?? []) as ChapterPhoto[],
+    }),
+    [bride.data, groom.data],
+  );
+  const [galleries, setGalleries] = useState<{
+    bride: ChapterPhoto[];
+    groom: ChapterPhoto[];
+  } | null>(null);
+
+  useEffect(() => {
+    setGalleries(structuredClone(storedGalleries));
+  }, [storedGalleries]);
+
   const all = useMemo(
     () => (sections.data?.sections ?? []) as unknown as Section[],
     [sections.data],
@@ -73,8 +105,17 @@ export function Content() {
     return { content: { sections: merged.filter((s) => s.enabled !== false) } };
   }, [all, slug, draft]);
 
+  const dirtyGalleries = galleries
+    ? (["bride", "groom"] as const).filter(
+        (who) =>
+          JSON.stringify(galleries[who]) !==
+          JSON.stringify(storedGalleries[who]),
+      )
+    : [];
   const dirty =
-    draft && stored ? JSON.stringify(draft) !== JSON.stringify(stored) : false;
+    (draft && stored
+      ? JSON.stringify(draft) !== JSON.stringify(stored)
+      : false) || dirtyGalleries.length > 0;
 
   const submit = async () => {
     if (!draft || !dirty || uploading) return;
@@ -99,6 +140,40 @@ export function Content() {
         return;
       }
       setUploading(false);
+    }
+
+    // The galleries first: a photo picked in the panel is a data URL until it
+    // is uploaded, and the manifest must hold URLs.
+    if (galleries && dirtyGalleries.length > 0) {
+      setUploading(true);
+      try {
+        for (const who of dirtyGalleries) {
+          let posts = galleries[who];
+          if (hasPendingImages(posts)) {
+            posts = await uploadPendingImages(posts, `instagram-${who}`);
+            setGalleries((current) =>
+              current ? { ...current, [who]: posts } : current,
+            );
+          }
+          await saveGallery.mutateAsync({
+            params: { path: { person: who } },
+            body: { posts: posts as never },
+          });
+        }
+      } catch (err) {
+        setUploading(false);
+        setError(problemDetail(err, "Não conseguimos salvar as fotos."));
+        return;
+      }
+      setUploading(false);
+    }
+
+    // A section may be untouched while a gallery is not — the bar covers both,
+    // so saving one must not write the other back over itself.
+    if (JSON.stringify(draft) === JSON.stringify(stored)) {
+      setSaved("Salvo. O site já está com essa versão.");
+      void queryClient.invalidateQueries();
+      return;
     }
 
     save.mutate(
@@ -164,68 +239,86 @@ export function Content() {
         }}
       />
 
-      <FocusContext value={focusOn}>
-        <PickContext
-          value={{
-            picking,
-            start: (target, onPicked) => {
-              pickHandler.current = onPicked;
-              setPicking(target);
-            },
-            cancel: () => setPicking(null),
-          }}
-        >
-          <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,26rem)_1fr]">
-            <div className="min-w-0 overflow-y-auto border border-olive-line bg-cream px-4 py-4">
-              {draft ? (
-                <>
-                  <div className="border-b border-sand-line pb-3">
-                    <Toggle
-                      checked={draft.enabled !== false}
-                      onChange={(on) => setDraft({ ...draft, enabled: on })}
-                      label="Mostrar esta seção no site"
-                      hint="Desligada, ela some do site inteiro."
-                    />
-                  </div>
-                  {/* The editor folds the section into its own groups, so there
-                  is no outer accordion here — that would only add a lid. */}
-                  <div className="mt-4">
-                    <PayloadEditor
-                      value={payload}
-                      path={slug}
-                      onChange={(next) =>
-                        setDraft({ ...draft, [slug]: next as never })
-                      }
-                    />
-                  </div>
-                </>
-              ) : (
-                <p className="font-body text-sm text-dark-gray italic">·</p>
-              )}
-            </div>
-
-            <SitePreview
-              draft={previewDraft}
-              focusSlug={slug}
-              focusAnchor={anchor?.id}
-              focusNonce={anchor?.n}
-              picking={picking ?? undefined}
-              onPicked={(x, y) => {
-                pickHandler.current?.(x, y);
-                setPicking(null);
-              }}
-              className="min-h-[24rem] xl:min-h-0"
+      <GalleryContext
+        value={(person) =>
+          galleries ? (
+            <ChapterPhotos
+              posts={galleries[person]}
+              onChange={(next) =>
+                setGalleries((current) =>
+                  current ? { ...current, [person]: next } : current,
+                )
+              }
             />
-          </div>
-        </PickContext>
-      </FocusContext>
+          ) : null
+        }
+      >
+        <FocusContext value={focusOn}>
+          <PickContext
+            value={{
+              picking,
+              start: (target, onPicked) => {
+                pickHandler.current = onPicked;
+                setPicking(target);
+              },
+              cancel: () => setPicking(null),
+            }}
+          >
+            <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,26rem)_1fr]">
+              <div className="min-w-0 overflow-y-auto border border-olive-line bg-cream px-4 py-4">
+                {draft ? (
+                  <>
+                    <div className="border-b border-sand-line pb-3">
+                      <Toggle
+                        checked={draft.enabled !== false}
+                        onChange={(on) => setDraft({ ...draft, enabled: on })}
+                        label="Mostrar esta seção no site"
+                        hint="Desligada, ela some do site inteiro."
+                      />
+                    </div>
+                    {/* The editor folds the section into its own groups, so there
+                  is no outer accordion here — that would only add a lid. */}
+                    <div className="mt-4">
+                      <PayloadEditor
+                        value={payload}
+                        path={slug}
+                        onChange={(next) =>
+                          setDraft({ ...draft, [slug]: next as never })
+                        }
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <p className="font-body text-sm text-dark-gray italic">·</p>
+                )}
+              </div>
+
+              <SitePreview
+                draft={previewDraft}
+                focusSlug={slug}
+                focusAnchor={anchor?.id}
+                focusNonce={anchor?.n}
+                picking={picking ?? undefined}
+                onPicked={(x, y) => {
+                  pickHandler.current?.(x, y);
+                  setPicking(null);
+                }}
+                className="min-h-[24rem] xl:min-h-0"
+              />
+            </div>
+          </PickContext>
+        </FocusContext>
+      </GalleryContext>
 
       <SaveBar
         visible={dirty}
         saving={save.isPending || uploading}
         label={uploading ? "Enviando a foto…" : undefined}
         onSave={() => void submit()}
-        onReset={() => stored && setDraft(structuredClone(stored))}
+        onReset={() => {
+          if (stored) setDraft(structuredClone(stored));
+          setGalleries(structuredClone(storedGalleries));
+        }}
       />
     </div>
   );

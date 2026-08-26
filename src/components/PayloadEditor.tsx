@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from "lucide-react";
 
+import { ChapterPhotosSlot } from "./ChapterPhotos";
 import { DateTimeField, ImageField } from "./fields";
 import { createContext, use } from "react";
 
@@ -390,6 +391,16 @@ export function PayloadEditor({
           </div>
         );
       })}
+
+      {/* The gallery belongs to the person, not to the section payload — it is
+          a file in the bucket. The couple should not have to know that, so it
+          appears here, under her handle, where it appears on the site. */}
+      {anchorPath(path) === "our_story.bride" ? (
+        <ChapterPhotosSlot person="bride" />
+      ) : null}
+      {anchorPath(path) === "our_story.groom" ? (
+        <ChapterPhotosSlot person="groom" />
+      ) : null}
     </div>
   );
 }

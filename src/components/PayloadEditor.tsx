@@ -61,8 +61,12 @@ const DATETIME = /datetime/i;
  * Keys holding a real calendar date. `date` is NOT here: the album's is a
  * freeform line — "2021", "1º de agosto de 2020" — and a calendar cannot hold
  * that, so routing it there showed a dash where the couple's own words were.
+ *
+ * Matched whole, never by substring: `event_date` earns the calendar, and it
+ * only stopped getting one when the payload renamed `event_datetime`, which
+ * quietly dropped the wedding day back to a box you type 2027-08-07 into.
  */
-const DATE_ONLY = /^deadline$/i;
+const DATE_ONLY = /^(deadline|event_date)$/i;
 
 function humanize(key: string): string {
   return (
@@ -78,7 +82,9 @@ function TextInput({
   keyName,
   value,
   onChange,
+  onFocus,
 }: {
+  onFocus?: () => void;
   keyName: string;
   value: string;
   onChange: (v: string) => void;
@@ -90,10 +96,7 @@ function TextInput({
   // show what those asterisks will become.
   if (prose || SHORT_MARKDOWN.test(keyName) || /\*\*|\[.+\]\(/.test(value)) {
     return (
-      <MarkdownField
-        value={value}
-        onChange={onChange}
-        />
+      <MarkdownField value={value} onChange={onChange} onFocus={onFocus} />
     );
   }
   return (
@@ -101,6 +104,7 @@ function TextInput({
       type="text"
       value={value}
       onChange={(event) => onChange(event.target.value)}
+      onFocus={onFocus}
       className="mt-1 min-h-9 w-full border border-olive-line bg-cream px-3 font-body text-sm text-ink focus:border-olive"
     />
   );
@@ -136,8 +140,20 @@ export function PayloadEditor({
     if (IMAGE.test(key)) {
       return <ImageField fieldKey={key} value={value} onChange={onChange} />;
     }
+    // A chapter is several screens tall and shows one scene at a time, so the
+    // accordion's anchor cannot also be the bio's — clicking into the bio has
+    // to move the preview again, further down, or she is editing text that is
+    // not on screen. Scoped to the last two segments so a `bio` here never
+    // borrows an anchor meant for one somewhere else.
+    const scoped = path.split(".").slice(-2).join(".");
+    const fieldAnchor = FIELD_ANCHOR[scoped];
     return (
-      <TextInput keyName={key} value={value} onChange={(v) => onChange(v)} />
+      <TextInput
+        keyName={key}
+        value={value}
+        onChange={(v) => onChange(v)}
+        onFocus={fieldAnchor ? () => focusPreview?.(fieldAnchor) : undefined}
+      />
     );
   }
 

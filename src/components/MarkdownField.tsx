@@ -72,9 +72,12 @@ function toMarkdown(root: HTMLElement): string {
 export function MarkdownField({
   value,
   onChange,
+  onFocus,
 }: {
   value: string
   onChange: (next: string) => void
+  /** Fired when the couple clicks in — the panel uses it to move the preview. */
+  onFocus?: () => void
 }) {
   const box = useRef<HTMLDivElement>(null)
   const [focused, setFocused] = useState(false)
@@ -161,7 +164,10 @@ export function MarkdownField({
           setFocused(false)
           emit()
         }}
-        onFocus={() => setFocused(true)}
+        onFocus={() => {
+          setFocused(true)
+          onFocus?.()
+        }}
         onPaste={(event) => {
           // Paste as plain text: pasting from a document otherwise drags in
           // fonts and colours that have nothing to do with the site.

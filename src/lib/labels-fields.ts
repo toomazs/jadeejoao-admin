@@ -17,6 +17,7 @@
 export const FIELD_HINT: Record<string, string> = {
   event_date: 'Aparece no topo, no Grande Dia e no rodapé.',
   hero_image_url: 'A foto grande de abertura, atrás do logo.',
+  date: 'A linha pequena embaixo do rótulo, na foto. Texto livre.',
   eye_x: 'Posição do olho da Catarina na foto, de onde saem as estrelinhas.',
   eye_y: 'Posição do olho da Catarina na foto, de onde saem as estrelinhas.',
 }
@@ -38,7 +39,7 @@ export const FIELD_PT: Record<string, string> = {
   event_date: 'Data do casamento',
   city_label: 'Cidade',
   milestones: 'Marcos',
-  date: 'Data',
+  date: 'Subtítulo',
   time: 'Horário',
   icon: 'Ícone',
   programme: 'Programação',
@@ -138,6 +139,8 @@ export const SECTION_GROUPS: Record<string, FieldGroup[]> = {
 export const FIELD_ANCHOR: Record<string, string> = {
   bride: 'chapter-bride',
   groom: 'chapter-groom',
+  'bride.bio': 'chapter-bride-bio',
+  'groom.bio': 'chapter-groom-bio',
   moments: 'story_album',
   title: 'story-album-title',
   letter_from_groom: 'letters',

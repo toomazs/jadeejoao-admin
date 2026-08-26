@@ -1632,7 +1632,7 @@ export interface components {
         };
         StoryMoment: {
             /**
-             * @description Freeform date line under the caption.
+             * @description Free line printed under the caption. Not parsed as a date.
              * @example 12 de maio de 2020
              */
             date?: string;

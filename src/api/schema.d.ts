@@ -214,6 +214,26 @@ export interface paths {
         patch: operations["admin-edit-guest"];
         trace?: never;
     };
+    "/api/v1/admin/guests/{guest_id}/invitation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Give a guest their own invitation
+         * @description Takes somebody out of a shared invitation into one of their own, labelled with their name and theirs to answer. Refused when they are already alone. If they were the one holding the invitation, whoever is left is handed it.
+         */
+        delete: operations["admin-detach-guest"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/import": {
         parameters: {
             query?: never;
@@ -2139,6 +2159,37 @@ export interface operations {
                 "application/json": components["schemas"]["GuestEditInputBody"];
             };
         };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "admin-detach-guest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guest_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {

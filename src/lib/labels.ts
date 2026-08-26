@@ -70,6 +70,10 @@ export function shortDate(iso: string | undefined): string {
  * want still goes in — the list is a shortcut, not a rule.
  */
 export const CEREMONY_ROLES = [
+  // First, and the default for somebody new: most people at a wedding are
+  // guests, and leaving the field blank made the panel offer "Outro…" as if
+  // being a guest were unusual.
+  'Convidado',
   'Noiva',
   'Noivo',
   'Mãe da noiva',

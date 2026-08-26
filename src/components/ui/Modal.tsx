@@ -1,3 +1,4 @@
+import { X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
@@ -126,9 +127,9 @@ export function Modal({
             type="button"
             onClick={leave}
             aria-label="Fechar"
-            className="shrink-0 cursor-pointer px-2 font-body text-sm text-dark-gray transition-colors hover:text-olive"
+            className="-mt-1 -mr-1 shrink-0 cursor-pointer p-2 text-dark-gray transition-colors hover:text-terracotta"
           >
-            fechar
+            <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </header>
 

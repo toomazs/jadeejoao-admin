@@ -1,5 +1,8 @@
 import { useState } from "react";
 
+import { X } from "lucide-react";
+import type { ReactNode } from "react";
+
 import { $api, problemDetail } from "../api/client";
 import { Button, Field, Modal, Notice, Select } from "./ui";
 import {
@@ -44,6 +47,7 @@ interface GuestEditorProps {
     groupId: string;
     groupLabel: string;
     fullName: string;
+    isPrimary: boolean;
   }[];
   onClose: () => void;
   onSaved: () => void;
@@ -68,7 +72,9 @@ export function GuestEditor({
   const [gender, setGender] = useState(row.gender ?? "");
   const [side, setSide] = useState(row.side ?? "");
   const [circle, setCircle] = useState(row.circle);
-  const [ceremonyRole, setCeremonyRole] = useState(row.ceremonyRole);
+  const [ceremonyRole, setCeremonyRole] = useState(
+    row.ceremonyRole || (row.guestId ? "" : "Convidado"),
+  );
   // Somebody already carrying a role the list does not have is editing a
   // custom one, whether or not they ever pressed "Outro".
   const [customRole, setCustomRole] = useState(
@@ -91,8 +97,27 @@ export function GuestEditor({
     "post",
     "/api/v1/admin/groups/{group_id}/members",
   );
+  const detach = $api.useMutation(
+    "delete",
+    "/api/v1/admin/guests/{guest_id}/invitation",
+  );
 
   const fail = (err: unknown) => setError(problemDetail(err));
+
+  /** Everybody on this invitation, the person being edited included. */
+  const onThisInvitation = allRows.filter((r) => r.groupId === row.groupId);
+  const sharing = onThisInvitation.length > 1;
+  const owner =
+    sharing &&
+    onThisInvitation.some((r) => r.guestId === row.guestId && r.isPrimary);
+
+  const detachGuest = (guestId: string) => {
+    setError("");
+    detach.mutate(
+      { params: { path: { guest_id: guestId } } },
+      { onSuccess: onSaved, onError: fail },
+    );
+  };
 
   /** The other invitations, one entry each, named after their label. */
   const invitations = [
@@ -114,10 +139,11 @@ export function GuestEditor({
     };
 
     if (creating) {
-      // No rename step: a new person's invitation is labelled with their name,
-      // and there is nothing yet to have renamed.
+      // Nothing to rename: a new person's invitation is labelled with their
+      // name. But they can be born straight into somebody else's, which is
+      // what "acompanhante" means most of the time.
       create.mutate(
-        { body: details as never },
+        { body: { ...details, group_id: moveTo || undefined } as never },
         { onSuccess: onSaved, onError: fail },
       );
       return;
@@ -249,68 +275,125 @@ export function GuestEditor({
           hint="Parentesco, lembretes — só vocês veem."
         />
 
-        {creating ? null : <hr className="my-1 border-sand-line" />}
+        <hr className="my-1 border-sand-line" />
 
-        {/* The label titles the invitation on the site, where the guest finds
-            it. Alone it is simply their name, and renaming it says nothing —
-            so it only appears once the invitation holds more than one person
-            and "Família Nascimento" starts to mean something. */}
-        {!creating && row.groupSize > 1 ? (
-          <Field
-            label="Nome do convite"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            hint={`O título que ${row.groupSize} pessoas veem ao encontrar este convite.`}
-          />
-        ) : null}
+        {/* One section, not three.
+            "Nome do convite", "Juntar a outro convite" and "Acrescentar
+            alguém" were the same question asked three ways — who does this
+            person share an invitation with — and which of the three made sense
+            depended on an answer the couple had to work out themselves. What
+            is shown now follows from where the person already is. */}
+        <div className="grid gap-3">
+          <span className="font-body text-sm text-dark-gray">Convite</span>
 
-        {creating ? null : (
-          <>
+          {sharing ? (
+            <>
+              <ul className="grid gap-1 border border-olive-line bg-veil px-3 py-2">
+                {onThisInvitation.map((person) => (
+                  <li
+                    key={person.guestId}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span className="min-w-0 truncate font-body text-sm text-ink">
+                      {person.fullName}
+                      {person.isPrimary ? (
+                        <span className="ml-1.5 font-body text-xs text-dark-gray">
+                          · responde
+                        </span>
+                      ) : null}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label={`Tirar ${person.fullName} deste convite`}
+                      title="Dar um convite só para esta pessoa"
+                      disabled={detach.isPending}
+                      onClick={() => detachGuest(person.guestId)}
+                      className="shrink-0 cursor-pointer p-1 text-dark-gray/50 transition-colors hover:text-terracotta disabled:opacity-40"
+                    >
+                      <X className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              <Field
+                label="Como este convite se chama"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                hint={`O título que ${onThisInvitation.length} pessoas veem ao encontrá-lo.`}
+              />
+            </>
+          ) : null}
+
+          {/* The owner of a shared invitation has nowhere to join: they are
+              already the one somebody else joined. */}
+          {!creating && !owner ? (
             <div>
+              <Rotulado
+                label={
+                  sharing
+                    ? "Mudar para outro convite"
+                    : "Juntar a outro convite"
+                }
+              >
+                <Select
+                  searchable
+                  value={moveTo}
+                  onChange={setMoveTo}
+                  placeholder="— manter onde está —"
+                  options={[
+                    { value: "", label: "— manter onde está —" },
+                    ...invitations.map(([id, text]) => ({
+                      value: id,
+                      label: text,
+                    })),
+                  ]}
+                />
+              </Rotulado>
+              {moveTo ? (
+                <div className="mt-2">
+                  <Button
+                    tone="quiet"
+                    disabled={merge.isPending}
+                    onClick={() => {
+                      setError("");
+                      merge.mutate(
+                        {
+                          params: { path: { group_id: moveTo } },
+                          body: { guest_id: row.guestId },
+                        },
+                        { onSuccess: onSaved, onError: fail },
+                      );
+                    }}
+                  >
+                    {merge.isPending ? "Movendo…" : "Mover agora"}
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {creating ? (
+            <Rotulado label="Onde esta pessoa entra">
               <Select
-                label="Juntar a outro convite"
                 searchable
                 value={moveTo}
                 onChange={setMoveTo}
-                placeholder="— manter onde está —"
+                placeholder="— num convite só dela —"
                 options={[
-                  { value: "", label: "— manter onde está —" },
+                  { value: "", label: "— num convite só dela —" },
                   ...invitations.map(([id, text]) => ({
                     value: id,
                     label: text,
                   })),
                 ]}
               />
-              <p className="mt-1 font-body text-xs text-dark-gray">
-                Quem responde continua sendo o principal do convite de destino.
-              </p>
-            </div>
+            </Rotulado>
+          ) : null}
 
-            {moveTo ? (
-              <Button
-                tone="quiet"
-                onClick={() => {
-                  setError("");
-                  merge.mutate(
-                    {
-                      params: { path: { group_id: moveTo } },
-                      body: { guest_id: row.guestId },
-                    },
-                    { onSuccess: onSaved, onError: fail },
-                  );
-                }}
-                disabled={merge.isPending}
-              >
-                {merge.isPending ? "Movendo…" : "Mover agora"}
-              </Button>
-            ) : null}
-
-            {/* The other direction, and the one the couple asks for more
-                often: not moving this person somewhere else, but adding
-                somebody beside them. A husband, a plus-one — one invitation,
-                one person answering for both. */}
-            <div className="border-t border-sand-line pt-3">
-              <span className="block font-body text-xs tracking-[0.1em] text-dark-gray uppercase">
+          {!creating ? (
+            <div>
+              <span className="font-body text-sm text-dark-gray">
                 Acrescentar alguém a este convite
               </span>
               <div className="mt-1 flex flex-wrap gap-2">
@@ -339,17 +422,30 @@ export function GuestEditor({
                   {addCompanion.isPending ? "Acrescentando…" : "Acrescentar"}
                 </Button>
               </div>
-              <p className="mt-1 font-body text-xs text-dark-gray">
-                {row.fullName || "Esta pessoa"} continua respondendo pelo
-                convite.
-              </p>
             </div>
-          </>
-        )}
+          ) : null}
+        </div>
 
         <Notice kind="error">{error}</Notice>
       </div>
     </Modal>
+  );
+}
+
+/**
+ * One label style for the whole modal.
+ *
+ * Field writes its label in sentence case and Select writes its in tracked
+ * uppercase — both fine, and side by side in the same form they read as two
+ * forms stitched together. Here the modal decides, and Select is asked for the
+ * box without a label of its own.
+ */
+function Rotulado({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block">
+      <span className="font-body text-sm text-dark-gray">{label}</span>
+      {children}
+    </label>
   );
 }
 
@@ -367,14 +463,15 @@ function Pick({
   labels: Record<string, string>;
 }) {
   return (
-    <Select
-      label={label}
-      value={value}
-      onChange={onChange}
-      options={[
-        { value: "", label: "—" },
-        ...options.map((key) => ({ value: key, label: labels[key] ?? key })),
-      ]}
-    />
+    <Rotulado label={label}>
+      <Select
+        value={value}
+        onChange={onChange}
+        options={[
+          { value: "", label: "—" },
+          ...options.map((key) => ({ value: key, label: labels[key] ?? key })),
+        ]}
+      />
+    </Rotulado>
   );
 }

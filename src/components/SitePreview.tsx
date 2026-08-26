@@ -36,6 +36,8 @@ interface SitePreviewProps {
   focusSlug?: string
   /** A finer target inside the section — one album frame, say. */
   focusAnchor?: string
+  /** Bumped on every request, so asking for the same place scrolls again. */
+  focusNonce?: number
   /**
    * When set, the site waits for a click on that photo and reports back where.
    * Beats asking anyone to guess a percentage.
@@ -49,6 +51,7 @@ export function SitePreview({
   draft,
   focusSlug,
   focusAnchor,
+  focusNonce,
   picking,
   onPicked,
   className = '',
@@ -82,7 +85,7 @@ export function SitePreview({
     const slug = focusAnchor || focusSlug
     if (!slug) return
     frame.current?.contentWindow?.postMessage({ type: 'preview-scroll', slug }, SITE_URL)
-  }, [ready, focusSlug, focusAnchor])
+  }, [ready, focusSlug, focusAnchor, focusNonce])
 
   useEffect(() => {
     if (!ready) return

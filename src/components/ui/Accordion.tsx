@@ -20,6 +20,7 @@ export function Accordion({
   subtitle,
   right,
   defaultOpen = false,
+  onOpen,
   children,
 }: {
   title: ReactNode
@@ -27,6 +28,8 @@ export function Accordion({
   /** Something on the far side of the header, like a remove button. */
   right?: ReactNode
   defaultOpen?: boolean
+  /** Fired on opening — the content editor uses it to move the preview. */
+  onOpen?: () => void
   children: ReactNode
 }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -39,7 +42,12 @@ export function Accordion({
           type="button"
           aria-expanded={open}
           aria-controls={bodyId}
-          onClick={() => setOpen((o) => !o)}
+          onClick={() => {
+            setOpen((o) => {
+              if (!o) onOpen?.()
+              return !o
+            })
+          }}
           className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
         >
           <ChevronDown

@@ -5,7 +5,7 @@ import { createContext, use } from "react";
 
 import { MarkdownField } from "./MarkdownField";
 import { Accordion, Button, Checkbox, DateField } from "./ui";
-import { FIELD_HINT, FIELD_PT, SECTION_GROUPS } from "../lib/labels-fields";
+import { FIELD_ANCHOR, FIELD_HINT, FIELD_PT, SECTION_GROUPS } from "../lib/labels-fields";
 
 /**
  * An editor that reads the payload rather than a hand-written form per section.
@@ -27,6 +27,9 @@ type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
  * Lets a field ask the preview to be pointed at, without threading a callback
  * through every level of a recursive editor.
  */
+/** Lets any accordion move the preview to whatever it just opened. */
+export const FocusContext = createContext<((anchor: string) => void) | null>(null)
+
 export const PickContext = createContext<{
   picking: string | null;
   /** The handler travels with the request, so no field owns shared state. */
@@ -110,6 +113,9 @@ export function PayloadEditor({
   onSave,
   saving,
 }: EditorProps) {
+  // Any accordion in here can ask the preview to show what it opened.
+  const focusPreview = use(FocusContext);
+
   if (value === null) {
     return <p className="font-body text-xs text-dark-gray italic">vazio</p>;
   }
@@ -190,6 +196,10 @@ export function PayloadEditor({
               key={group.title}
               title={group.title}
               subtitle={loneObject ? summarize(lone as Json) : undefined}
+              onOpen={() => {
+                const anchor = inside.map((k) => FIELD_ANCHOR[k]).find(Boolean)
+                if (anchor) focusPreview?.(anchor)
+              }}
             >
               {/* A group holding one object IS that object: unwrap it, or the
                   panel shows "A noiva" wrapping an accordion also called
@@ -340,6 +350,8 @@ function ArrayEditor({
   onSave?: () => void;
   saving?: boolean;
 }) {
+  const focusPreview = use(FocusContext);
+
   const blankLike = (sample: Json | undefined): Json => {
     if (sample === undefined) return "";
     if (Array.isArray(sample)) return [];
@@ -399,6 +411,9 @@ function ArrayEditor({
         <Accordion
           key={index}
           title={title(item, index)}
+          // Each frame is addressable, so opening the sixth moment shows the
+          // sixth moment rather than the top of the album.
+          onOpen={() => focusPreview?.(`moment-${index}`)}
           right={
             <button
               type="button"

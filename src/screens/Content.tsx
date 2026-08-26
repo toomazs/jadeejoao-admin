@@ -2,7 +2,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { $api, problemDetail } from "../api/client";
-import { PayloadEditor, PickContext } from "../components/PayloadEditor";
+import {
+  FocusContext,
+  PayloadEditor,
+  PickContext,
+} from "../components/PayloadEditor";
 import { ScreenTitle } from "../components/Shell";
 import { SitePreview } from "../components/SitePreview";
 import type { Draft } from "../components/SitePreview";
@@ -33,6 +37,12 @@ export function Content() {
   // answer. Kept here because the preview lives here too.
   const [picking, setPicking] = useState<string | null>(null);
   const pickHandler = useRef<((x: number, y: number) => void) | null>(null);
+  // Which part of the page the preview should be showing. Set when an
+  // accordion opens, so what is being edited is what is on screen. The counter
+  // rides along because re-opening the same one must scroll again, and a state
+  // set to the value it already held changes nothing.
+  const [anchor, setAnchor] = useState<{ id: string; n: number } | null>(null);
+  const focusOn = (id: string) => setAnchor((current) => ({ id, n: (current?.n ?? 0) + 1 }));
   const queryClient = useQueryClient();
 
   const sections = $api.useQuery("get", "/api/v1/admin/sections");
@@ -147,59 +157,63 @@ export function Content() {
         ))}
       </div>
 
-      <PickContext
-        value={{
-          picking,
-          start: (target, onPicked) => {
-            pickHandler.current = onPicked;
-            setPicking(target);
-          },
-          cancel: () => setPicking(null),
-        }}
-      >
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,26rem)_1fr]">
-          <div className="min-w-0 border border-olive-line bg-cream px-4 py-4">
-            {draft ? (
-              <>
-                <div className="border-b border-sand-line pb-3">
-                  <Toggle
-                    checked={draft.enabled !== false}
-                    onChange={(on) => setDraft({ ...draft, enabled: on })}
-                    label="Mostrar esta seção no site"
-                    hint="Desligada, ela some do site inteiro."
-                  />
-                </div>
-                {/* The editor folds the section into its own groups, so there
+      <FocusContext value={focusOn}>
+        <PickContext
+          value={{
+            picking,
+            start: (target, onPicked) => {
+              pickHandler.current = onPicked;
+              setPicking(target);
+            },
+            cancel: () => setPicking(null),
+          }}
+        >
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,26rem)_1fr]">
+            <div className="min-w-0 border border-olive-line bg-cream px-4 py-4">
+              {draft ? (
+                <>
+                  <div className="border-b border-sand-line pb-3">
+                    <Toggle
+                      checked={draft.enabled !== false}
+                      onChange={(on) => setDraft({ ...draft, enabled: on })}
+                      label="Mostrar esta seção no site"
+                      hint="Desligada, ela some do site inteiro."
+                    />
+                  </div>
+                  {/* The editor folds the section into its own groups, so there
                   is no outer accordion here — that would only add a lid. */}
-                <div className="mt-4">
-                  <PayloadEditor
-                    value={payload}
-                    path={slug}
-                    onChange={(next) =>
-                      setDraft({ ...draft, [slug]: next as never })
-                    }
-                    onSave={() => void submit()}
-                    saving={save.isPending || uploading}
-                  />
-                </div>
-              </>
-            ) : (
-              <p className="font-body text-sm text-dark-gray italic">·</p>
-            )}
-          </div>
+                  <div className="mt-4">
+                    <PayloadEditor
+                      value={payload}
+                      path={slug}
+                      onChange={(next) =>
+                        setDraft({ ...draft, [slug]: next as never })
+                      }
+                      onSave={() => void submit()}
+                      saving={save.isPending || uploading}
+                    />
+                  </div>
+                </>
+              ) : (
+                <p className="font-body text-sm text-dark-gray italic">·</p>
+              )}
+            </div>
 
-          <SitePreview
-            draft={previewDraft}
-            focusSlug={slug}
-            picking={picking ?? undefined}
-            onPicked={(x, y) => {
-              pickHandler.current?.(x, y);
-              setPicking(null);
-            }}
-            className="min-h-[36rem] xl:sticky xl:top-4 xl:h-[calc(100svh-2rem)]"
-          />
-        </div>
-      </PickContext>
+            <SitePreview
+              draft={previewDraft}
+              focusSlug={slug}
+              focusAnchor={anchor?.id}
+          focusNonce={anchor?.n}
+              picking={picking ?? undefined}
+              onPicked={(x, y) => {
+                pickHandler.current?.(x, y);
+                setPicking(null);
+              }}
+              className="min-h-[36rem] xl:sticky xl:top-4 xl:h-[calc(100svh-2rem)]"
+            />
+          </div>
+        </PickContext>
+      </FocusContext>
     </>
   );
 }

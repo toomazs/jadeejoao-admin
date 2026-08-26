@@ -127,3 +127,24 @@ export const SECTION_GROUPS: Record<string, FieldGroup[]> = {
     { title: 'Referências', keys: ['looks'] },
   ],
 }
+
+/**
+ * Where each editable thing lives on the page.
+ *
+ * Opening "O noivo" should put his chapter on screen; without this the preview
+ * stays wherever it was and the couple scrolls a second window by hand to find
+ * what they just opened.
+ */
+export const FIELD_ANCHOR: Record<string, string> = {
+  bride: 'chapter-bride',
+  groom: 'chapter-groom',
+  moments: 'story_album',
+  title: 'story-album-title',
+  letter_from_groom: 'letters',
+  letter_from_bride: 'letters',
+  body: 'invitation',
+  announcement: 'announcement',
+  programme: 'big_day',
+  lodgings: 'stay',
+  looks: 'dress_code',
+}

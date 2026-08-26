@@ -3,6 +3,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 
+import { portalHost } from "./portalHost";
+
 /**
  * The controls, in the couple's own clothes.
  *
@@ -342,7 +344,7 @@ export function Select({
                 ))}
               </ul>
             </div>,
-            document.body,
+            portalHost(wrapper.current),
           )
         : null}
     </div>

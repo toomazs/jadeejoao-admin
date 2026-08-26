@@ -1,9 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query'
+import { Pencil } from 'lucide-react'
 import { useState } from 'react'
 
 import { $api, problemDetail } from '../api/client'
 import { ScreenTitle } from '../components/Shell'
-import { Button, Chip, DataTable, Notice, Stat } from '../components/ui'
+import { Button, Chip, DataTable, Modal, Notice, Stat } from '../components/ui'
 import type { ChipTone, Column } from '../components/ui'
 import { CONTRIBUTION_STATUS_PT, money, shortDate } from '../lib/labels'
 
@@ -16,6 +17,7 @@ import { CONTRIBUTION_STATUS_PT, money, shortDate } from '../lib/labels'
  * should ever be counted.
  */
 export function Contributions() {
+  const [editing, setEditing] = useState<string | null>(null)
   const [error, setError] = useState('')
   const queryClient = useQueryClient()
 
@@ -78,12 +80,26 @@ export function Contributions() {
               Não chegou
             </Button>
           </div>
-        ) : null,
+        ) : (
+          // Already decided — and a decision can be the wrong one. Cancelling
+          // by mistake used to be final: the only transitions the database
+          // allowed went one way, so the money was written off for good.
+          <button
+            type="button"
+            title="Mudar a situação"
+            aria-label={`Mudar a situação de ${c.contributor_name}`}
+            onClick={() => setEditing(c.contribution_id)}
+            className="cursor-pointer p-1 text-dark-gray/50 transition-colors hover:text-olive"
+          >
+            <Pencil className="h-4 w-4" aria-hidden="true" />
+          </button>
+        ),
     },
   ]
 
-  const decide = (id: string, status: 'confirmed' | 'cancelled') => {
+  const decide = (id: string, status: 'declared' | 'confirmed' | 'cancelled') => {
     setError('')
+    setEditing(null)
     moderate.mutate(
       { params: { path: { contribution_id: id } }, body: { status } },
       {
@@ -118,6 +134,38 @@ export function Contributions() {
           minWidth="42rem"
         />
       </div>
+      {editing ? (
+        <Modal
+          title="Mudar a situação"
+          subtitle="O que vale é o que caiu na conta de vocês."
+          width="max-w-sm"
+          onClose={() => setEditing(null)}
+        >
+          <div className="grid gap-2">
+            {(
+              [
+                ['confirmed', 'Recebi'],
+                ['declared', 'Ainda esperando'],
+                ['cancelled', 'Não chegou'],
+              ] as const
+            ).map(([status, label]) => {
+              const current = all.find((c) => c.contribution_id === editing)?.status
+              return (
+                <Button
+                  key={status}
+                  tone={status === current ? 'primary' : 'quiet'}
+                  disabled={status === current}
+                  onClick={() => decide(editing, status)}
+                >
+                  {label}
+                  {status === current ? ' · é a atual' : ''}
+                </Button>
+              )
+            })}
+          </div>
+        </Modal>
+      ) : null}
+
     </>
   )
 }

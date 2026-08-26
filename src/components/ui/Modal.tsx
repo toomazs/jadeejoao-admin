@@ -5,6 +5,8 @@ import { Button } from './primitives'
 
 /** Kept in step with the .modal-out animation in global.css. */
 const EXIT_MS = 220
+/** Kept in step with .modal-in. */
+const ENTER_MS = 260
 
 /**
  * Every dialog in the panel, built once — and built the way the site builds
@@ -37,6 +39,17 @@ export function Modal({
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   const [closing, setClosing] = useState(false)
+  /**
+   * Whether the arrival has finished.
+   *
+   * The class has to come off once it has. Its keyframes end on `transform:
+   * none`, and `both` keeps that applied — a transform, even the identity one,
+   * makes an element the containing block for everything `fixed` inside it. So
+   * a dropdown portalled in here was positioned from the sheet's own corner
+   * instead of the window's, and opened a few hundred pixels below where the
+   * field was.
+   */
+  const [arrived, setArrived] = useState(false)
   const timer = useRef<number | undefined>(undefined)
 
   // A ref, not the state: state settles on the next render, so Escape followed
@@ -70,9 +83,14 @@ export function Modal({
       'input:not([type="hidden"]):not([disabled]), select, textarea, [contenteditable="true"]',
     )
     ;(field ?? dialog.querySelector<HTMLElement>('button:not([disabled])'))?.focus()
+    // Belt as well as the animationend below. An animation that never
+    // finishes — or never starts — would otherwise leave the transform on
+    // forever, and with it the wrong containing block.
+    const entered = window.setTimeout(() => setArrived(true), ENTER_MS)
     return () => {
       document.body.style.overflow = ''
       window.clearTimeout(timer.current)
+      window.clearTimeout(entered)
     }
   }, [])
 
@@ -89,8 +107,11 @@ export function Modal({
       onClick={(event) => {
         if (event.target === ref.current) leave()
       }}
+      onAnimationEnd={(event) => {
+        if (event.animationName === 'modal-in') setArrived(true)
+      }}
       className={`m-auto w-full ${width} border border-olive-line bg-cream p-0 text-ink backdrop:bg-ink/55 backdrop:backdrop-blur-sm ${
-        closing ? 'modal-out' : 'modal-in'
+        closing ? 'modal-out' : arrived ? '' : 'modal-in'
       }`}
     >
       <div className="max-h-[85svh] overflow-y-auto">

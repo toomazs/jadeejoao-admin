@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 
 import { Checkbox } from './controls'
+import { portalHost } from './portalHost'
 import { Empty, SkeletonRows } from './primitives'
 
 /**
@@ -323,7 +324,7 @@ function ColumnFilter({
                 </div>
               ))}
             </div>,
-            document.body,
+            portalHost(wrapper.current),
           )
         : null}
     </div>

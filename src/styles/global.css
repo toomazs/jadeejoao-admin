@@ -67,9 +67,13 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /* Quiet. Two olive pixels held two pixels off the edge drew a second border
+     around every field that already had one, and the panel is nothing but
+     fields — one click and something in the room was always ringed. A single
+     hairline, tight to the shape, still says where the keyboard is. */
   :focus-visible {
-    outline: 2px solid var(--olive);
-    outline-offset: 2px;
+    outline: 1px solid var(--olive);
+    outline-offset: 0;
   }
 
   /* Numbers in tables must line up; proportional digits make them wobble. */

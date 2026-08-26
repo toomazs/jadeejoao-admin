@@ -662,7 +662,7 @@ export interface components {
             confirmed_centavos: number;
             /**
              * Format: int64
-             * @description Sum of declared (not yet confirmed) contributions. Always 0 for link gifts.
+             * @description Sum of declared contributions still waiting for the couple to confirm them. Not shown as received.
              */
             declared_centavos: number;
             description?: string;
@@ -706,7 +706,7 @@ export interface components {
             title: string;
             /**
              * Format: int64
-             * @description Remaining quota units (only for unit-limited PIX gifts). Optimistic: declared + confirmed consume units.
+             * @description Remaining quota units (only for unit-limited PIX gifts). Counts confirmed contributions only — a declared PIX is a claim, not money.
              */
             units_left?: number;
         };
@@ -1087,7 +1087,7 @@ export interface components {
             confirmed_centavos: number;
             /**
              * Format: int64
-             * @description Sum of declared (not yet confirmed) contributions. Always 0 for link gifts.
+             * @description Sum of declared contributions still waiting for the couple to confirm them. Not shown as received.
              */
             declared_centavos: number;
             description?: string;
@@ -1131,7 +1131,7 @@ export interface components {
             title: string;
             /**
              * Format: int64
-             * @description Remaining quota units (only for unit-limited PIX gifts). Optimistic: declared + confirmed consume units.
+             * @description Remaining quota units (only for unit-limited PIX gifts). Counts confirmed contributions only — a declared PIX is a claim, not money.
              */
             units_left?: number;
         };
@@ -1451,10 +1451,10 @@ export interface components {
              */
             readonly $schema?: string;
             /**
-             * @description confirmed: the PIX landed. cancelled: it never will.
+             * @description confirmed: the PIX landed. cancelled: it never will. declared: back to waiting, for a decision made by mistake.
              * @enum {string}
              */
-            status: "confirmed" | "cancelled";
+            status: "declared" | "confirmed" | "cancelled";
         };
         OkOutputBody: {
             /**

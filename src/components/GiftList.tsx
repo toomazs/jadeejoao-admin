@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
 import { createContext, use } from 'react'
 import type { ReactNode } from 'react'
 
@@ -43,6 +43,8 @@ export interface Gift {
   sort?: number
   /** Read-only, from the API — what guests have actually sent. */
   confirmed_centavos?: number
+  /** Read-only: quotas minus the ones already taken. The API works it out. */
+  units_left?: number
 }
 
 /** Lets the payload editor drop the list in without knowing what it is. */
@@ -77,6 +79,14 @@ export function GiftList({
   const update = (at: number, patch: Partial<Gift>) =>
     onChange(gifts.map((gift, i) => (i === at ? { ...gift, ...patch } : gift)))
 
+  const move = (at: number, delta: number) => {
+    const to = at + delta
+    if (to < 0 || to >= gifts.length) return
+    const next = [...gifts]
+    ;[next[at], next[to]] = [next[to], next[at]]
+    onChange(next)
+  }
+
   return (
     <div className="grid gap-2">
       {gifts.map((gift, at) => (
@@ -86,14 +96,34 @@ export function GiftList({
           subtitle={summarize(gift)}
           defaultOpen={isNew(gift)}
           right={
-            <button
-              type="button"
-              aria-label={`Remover ${gift.title || 'presente'}`}
-              onClick={() => onChange(gifts.filter((_, i) => i !== at))}
-              className="cursor-pointer p-1 font-body text-sm text-dark-gray/70 transition-colors hover:text-terracotta"
-            >
-              remover
-            </button>
+            <div className="flex items-center">
+              <button
+                type="button"
+                aria-label="Mover para antes"
+                disabled={at === 0}
+                onClick={() => move(at, -1)}
+                className="cursor-pointer p-1 text-dark-gray/60 transition-colors hover:text-olive disabled:cursor-not-allowed disabled:opacity-30"
+              >
+                <ArrowUp className="h-4 w-4" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                aria-label="Mover para depois"
+                disabled={at === gifts.length - 1}
+                onClick={() => move(at, 1)}
+                className="cursor-pointer p-1 text-dark-gray/60 transition-colors hover:text-olive disabled:cursor-not-allowed disabled:opacity-30"
+              >
+                <ArrowDown className="h-4 w-4" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                aria-label={`Remover ${gift.title || 'presente'}`}
+                onClick={() => onChange(gifts.filter((_, i) => i !== at))}
+                className="cursor-pointer p-1 text-dark-gray/60 transition-colors hover:text-terracotta"
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
           }
         >
           <div className="grid gap-3">
@@ -180,22 +210,16 @@ export function GiftList({
               </>
             )}
 
-            <div className="flex flex-wrap items-end gap-4">
-              <Field
-                label="Ordem"
-                inputMode="numeric"
-                className="w-28"
-                value={String(gift.sort ?? 0)}
-                onChange={(event) => update(at, { sort: Number(event.target.value.replace(/\D/g, '')) || 0 })}
-              />
-              <div className="min-h-10 pt-5">
-                <Toggle
-                  checked={gift.active !== false}
-                  onChange={(on) => update(at, { active: on })}
-                  label="Aparece no site"
-                />
-              </div>
-            </div>
+            {/* No "Ordem" box. It held a number whose only job was to sort a
+                list that is right here — asking someone to work out that 20
+                comes after 10 in order to put one card before another. The
+                arrows in the header do it, and the position becomes the
+                number on the way out. */}
+            <Toggle
+              checked={gift.active !== false}
+              onChange={(on) => update(at, { active: on })}
+              label="Aparece no site"
+            />
           </div>
         </Accordion>
       ))}
@@ -212,7 +236,6 @@ export function GiftList({
                 kind: 'link',
                 title: '',
                 active: true,
-                sort: gifts.length,
               },
             ])
           }
@@ -236,13 +259,14 @@ export function GiftList({
  * what keeps the request from being rejected for describing a gift that could
  * not exist.
  */
-export function giftBody(gift: Gift) {
+export function giftBody(gift: Gift, at: number) {
   const common = {
     title: (gift.title ?? '').trim(),
     description: (gift.description ?? '').trim(),
     image_url: gift.image_url?.trim() || undefined,
     active: gift.active !== false,
-    sort: gift.sort ?? 0,
+    // The place in the list is the order. Nothing else decides it.
+    sort: at,
   }
   if ((gift.kind ?? 'link') === 'pix') {
     return {

@@ -120,14 +120,39 @@ export function Content() {
    * unsaved draft and the disabled ones dropped — which is exactly what the
    * public endpoint does server-side, so the preview matches production.
    */
+  /**
+   * The gift list as the site would receive it.
+   *
+   * The card counts down `units_left`, which the API works out — quotas minus
+   * the ones already taken. The panel edits `max_units`, so raising the number
+   * of quotas changed nothing on screen: the preview was still showing a
+   * remainder computed from the old total. Here the same subtraction is done
+   * against the draft, with the taken count read from what was stored.
+   */
+  const previewGifts = useMemo(
+    () =>
+      (gifts ?? storedGifts)
+        .filter((g) => g.active !== false)
+        .map((gift) => {
+          if (gift.max_units == null) return gift;
+          const before = storedGifts.find((g) => g.gift_id === gift.gift_id);
+          const taken = Math.max(
+            0,
+            (before?.max_units ?? 0) - (before?.units_left ?? before?.max_units ?? 0),
+          );
+          return { ...gift, units_left: Math.max(0, gift.max_units - taken) };
+        }),
+    [gifts, storedGifts],
+  );
+
   const previewDraft: Draft = useMemo(() => {
     const merged = all.map((s) => (s.slug === slug && draft ? draft : s));
     return {
       content: { sections: merged.filter((s) => s.enabled !== false) },
       // The unsaved gift list too — it is what the Presentes section draws.
-      gifts: { gifts: (gifts ?? storedGifts).filter((g) => g.active !== false) },
+      gifts: { gifts: previewGifts },
     };
-  }, [all, slug, draft, gifts, storedGifts]);
+  }, [all, slug, draft, previewGifts]);
 
   const dirtyGalleries = galleries
     ? (["bride", "groom"] as const).filter(
@@ -211,14 +236,17 @@ export function Content() {
             });
           }
         }
-        for (const gift of gifts) {
-          const body = giftBody(gift);
+        for (const [at, gift] of gifts.entries()) {
+          const body = giftBody(gift, at);
           if (isNew(gift)) {
             await createGift.mutateAsync({ body: body as never });
             continue;
           }
           const before = storedGifts.find((g) => g.gift_id === gift.gift_id);
-          if (JSON.stringify(before) === JSON.stringify(gift)) continue;
+          // Position counts as a change: moving a card is the only way its
+          // order is set now, and nothing else about it need have moved.
+          const moved = storedGifts.indexOf(before as Gift) !== at;
+          if (!moved && JSON.stringify(before) === JSON.stringify(gift)) continue;
           await updateGift.mutateAsync({
             params: { path: { gift_id: gift.gift_id as string } },
             body: body as never,

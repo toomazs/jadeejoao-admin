@@ -5,11 +5,21 @@ import { Button, Field, Modal, Notice, Select } from "./ui";
 import {
   CATEGORIES,
   CATEGORY_ONE,
+  CEREMONY_ROLES,
   GENDERS,
   GENDER_PT,
   SIDES,
   SIDE_PT,
 } from "../lib/labels";
+
+/**
+ * The "let me type one" option.
+ *
+ * A word nobody would give somebody as a role, so it cannot collide with a
+ * real one. It was a NUL character first, which is clever and puts a null byte
+ * in a source file — grep then calls it binary and refuses to read it.
+ */
+const OUTRO = "__outro__";
 
 interface Row {
   groupId: string;
@@ -22,6 +32,8 @@ interface Row {
   circle: string;
   ceremonyRole: string;
   notes: string;
+  /** How many share this invitation. Decides whether it has a name worth having. */
+  groupSize: number;
 }
 
 interface GuestEditorProps {
@@ -57,15 +69,23 @@ export function GuestEditor({
   const [side, setSide] = useState(row.side ?? "");
   const [circle, setCircle] = useState(row.circle);
   const [ceremonyRole, setCeremonyRole] = useState(row.ceremonyRole);
+  // Somebody already carrying a role the list does not have is editing a
+  // custom one, whether or not they ever pressed "Outro".
+  const [customRole, setCustomRole] = useState(
+    Boolean(row.ceremonyRole) &&
+      !(CEREMONY_ROLES as readonly string[]).includes(row.ceremonyRole),
+  );
   const [notes, setNotes] = useState(row.notes);
   const [label, setLabel] = useState(row.groupLabel);
   const [moveTo, setMoveTo] = useState("");
+  const [companion, setCompanion] = useState("");
   const [error, setError] = useState("");
 
   // A row with no id is somebody who does not exist yet.
   const creating = !row.guestId;
   const save = $api.useMutation("patch", "/api/v1/admin/guests/{guest_id}");
   const create = $api.useMutation("post", "/api/v1/admin/guests");
+  const addCompanion = $api.useMutation("post", "/api/v1/admin/guests");
   const rename = $api.useMutation("patch", "/api/v1/admin/groups/{group_id}");
   const merge = $api.useMutation(
     "post",
@@ -188,12 +208,38 @@ export function GuestEditor({
             onChange={(e) => setCircle(e.target.value)}
             hint="Amigos, família, trabalho…"
           />
-          <Field
-            label="Papel"
-            value={ceremonyRole}
-            onChange={(e) => setCeremonyRole(e.target.value)}
-            hint="Padrinho, madrinha…"
-          />
+          <div>
+            <Select
+              label="Papel"
+              value={customRole ? OUTRO : ceremonyRole}
+              onChange={(next) => {
+                if (next === OUTRO) {
+                  setCustomRole(true);
+                  setCeremonyRole("");
+                  return;
+                }
+                setCustomRole(false);
+                setCeremonyRole(next);
+              }}
+              options={[
+                { value: "", label: "— sem papel —" },
+                ...CEREMONY_ROLES.map((role) => ({ value: role, label: role })),
+                { value: OUTRO, label: "Outro…" },
+              ]}
+            />
+            {/* Typed by hand only when they ask for it. Free text every time is
+                how "Madrinha" and "madrinha" become two roles, and the ceremony
+                card grows a duplicate of itself. */}
+            {customRole ? (
+              <input
+                autoFocus
+                value={ceremonyRole}
+                onChange={(e) => setCeremonyRole(e.target.value)}
+                placeholder="Qual papel?"
+                className="mt-1.5 min-h-10 w-full border border-olive-line bg-cream px-3 font-body text-base text-ink placeholder:text-dark-gray/45 focus:border-olive"
+              />
+            ) : null}
+          </div>
         </div>
 
         <Field
@@ -203,20 +249,27 @@ export function GuestEditor({
           hint="Parentesco, lembretes — só vocês veem."
         />
 
-        <hr className="my-1 border-sand-line" />
+        {creating ? null : <hr className="my-1 border-sand-line" />}
 
-        <Field
-          label="Nome do convite"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          hint="O título que o convidado vê ao encontrar o convite."
-        />
+        {/* The label titles the invitation on the site, where the guest finds
+            it. Alone it is simply their name, and renaming it says nothing —
+            so it only appears once the invitation holds more than one person
+            and "Família Nascimento" starts to mean something. */}
+        {!creating && row.groupSize > 1 ? (
+          <Field
+            label="Nome do convite"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            hint={`O título que ${row.groupSize} pessoas veem ao encontrar este convite.`}
+          />
+        ) : null}
 
         {creating ? null : (
           <>
             <div>
               <Select
                 label="Juntar a outro convite"
+                searchable
                 value={moveTo}
                 onChange={setMoveTo}
                 placeholder="— manter onde está —"
@@ -251,6 +304,46 @@ export function GuestEditor({
                 {merge.isPending ? "Movendo…" : "Mover agora"}
               </Button>
             ) : null}
+
+            {/* The other direction, and the one the couple asks for more
+                often: not moving this person somewhere else, but adding
+                somebody beside them. A husband, a plus-one — one invitation,
+                one person answering for both. */}
+            <div className="border-t border-sand-line pt-3">
+              <span className="block font-body text-xs tracking-[0.1em] text-dark-gray uppercase">
+                Acrescentar alguém a este convite
+              </span>
+              <div className="mt-1 flex flex-wrap gap-2">
+                <input
+                  value={companion}
+                  onChange={(e) => setCompanion(e.target.value)}
+                  placeholder="Nome de quem vem junto"
+                  className="min-h-10 min-w-0 flex-1 border border-olive-line bg-cream px-3 font-body text-base text-ink placeholder:text-dark-gray/45 focus:border-olive"
+                />
+                <Button
+                  tone="quiet"
+                  disabled={!companion.trim() || addCompanion.isPending}
+                  onClick={() => {
+                    setError("");
+                    addCompanion.mutate(
+                      {
+                        body: {
+                          full_name: companion.trim(),
+                          group_id: row.groupId,
+                        } as never,
+                      },
+                      { onSuccess: onSaved, onError: fail },
+                    );
+                  }}
+                >
+                  {addCompanion.isPending ? "Acrescentando…" : "Acrescentar"}
+                </Button>
+              </div>
+              <p className="mt-1 font-body text-xs text-dark-gray">
+                {row.fullName || "Esta pessoa"} continua respondendo pelo
+                convite.
+              </p>
+            </div>
           </>
         )}
 

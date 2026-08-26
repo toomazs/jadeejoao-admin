@@ -54,12 +54,14 @@ export function Dashboard() {
   }, [people])
 
   /**
-   * The wedding party, grouped by what each person is there to do.
+   * The wedding party, in rows.
    *
-   * A flat row of twenty-two names and twenty-two little labels was a wall to
-   * read: the roles were repeated once per person and the shape of the thing —
-   * two people getting married, their parents, their padrinhos — was nowhere in
-   * it. Grouped, the role is said once and the names sit under it.
+   * The couple reads this as a procession, not a list: the two of them, then
+   * the four parents, then the padrinhos, then the rest. So the rows are
+   * declared rather than sorted — an alphabet would put the celebrante before
+   * the noiva. Roles the couple invents fall into a row of their own at the
+   * end, because nobody here knows where they belong; "Convidado" is not a
+   * role and never appears.
    */
   const party = useMemo(() => {
     const byRole = new Map<string, string[]>()
@@ -68,30 +70,31 @@ export function Dashboard() {
       if (!role || role === 'Convidado') continue
       byRole.set(role, [...(byRole.get(role) ?? []), person.full_name])
     }
-    // The order of the day, not the alphabet: the couple, the people who made
-    // them, the ones standing beside them, then everyone else.
-    const ORDER = [
-      'Noiva',
-      'Noivo',
-      'Mãe da noiva',
-      'Pai da noiva',
-      'Mãe do noivo',
-      'Pai do noivo',
-      'Madrinha',
-      'Padrinho',
-      'Dama de honra',
-      'Pajem',
-      'Celebrante',
+
+    const ROWS = [
+      ['Noiva', 'Noivo'],
+      ['Pai da noiva', 'Mãe da noiva', 'Pai do noivo', 'Mãe do noivo'],
+      ['Madrinha', 'Padrinho'],
+      ['Dama de honra', 'Pajem', 'Celebrante'],
     ]
-    const rank = (role: string) => {
-      const at = ORDER.indexOf(role)
-      return at === -1 ? ORDER.length : at
-    }
-    return [...byRole.entries()]
-      .map(([role, names]) => ({ role, names: names.sort((a, b) => a.localeCompare(b, 'pt-BR')) }))
-      .sort((a, b) => rank(a.role) - rank(b.role) || a.role.localeCompare(b.role, 'pt-BR'))
+    const known = new Set(ROWS.flat())
+
+    const fill = (roles: string[]) =>
+      roles
+        .filter((role) => byRole.has(role))
+        .map((role) => ({
+          role,
+          names: (byRole.get(role) ?? []).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+        }))
+
+    const rows = ROWS.map(fill).filter((row) => row.length > 0)
+
+    const theirs = [...byRole.keys()].filter((role) => !known.has(role)).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+    if (theirs.length > 0) rows.push(fill(theirs))
+    return rows
   }, [people])
-  const partySize = party.reduce((n, group) => n + group.names.length, 0)
+
+  const partySize = party.flat().reduce((n, group) => n + group.names.length, 0)
 
   const allGifts = gifts.data?.gifts ?? []
   const received = allGifts.reduce((sum, g) => sum + (g.confirmed_centavos ?? 0), 0)
@@ -181,22 +184,32 @@ export function Dashboard() {
             </Link>
           }
         >
-          <div className="grid gap-3 px-4 py-4 sm:grid-cols-2 xl:grid-cols-3">
-            {party.map(({ role, names }) => (
-              <div key={role} className="border-l-2 border-gold-sand pl-3">
-                <p className="font-body text-xs tracking-[0.12em] text-olive uppercase">
-                  {role}
-                  {names.length > 1 ? (
-                    <span className="text-dark-gray/60"> · {names.length}</span>
-                  ) : null}
-                </p>
-                <ul className="mt-1">
-                  {names.map((name) => (
-                    <li key={name} className="font-body text-sm text-ink">
-                      {name}
-                    </li>
-                  ))}
-                </ul>
+          <div className="grid gap-4 px-4 py-4">
+            {party.map((row) => (
+              <div
+                key={row.map((group) => group.role).join('|')}
+                // Up to four across, and never more than the row holds — two
+                // roles share the width between them rather than each taking a
+                // quarter and leaving half the line empty.
+                className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(12rem,1fr))]"
+              >
+                {row.map(({ role, names }) => (
+                  <div key={role} className="border-l-2 border-gold-sand pl-3">
+                    <p className="font-body text-xs tracking-[0.12em] text-olive uppercase">
+                      {role}
+                      {names.length > 1 ? (
+                        <span className="text-dark-gray/60"> · {names.length}</span>
+                      ) : null}
+                    </p>
+                    <ul className="mt-1">
+                      {names.map((name) => (
+                        <li key={name} className="font-body text-sm text-ink">
+                          {name}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
               </div>
             ))}
           </div>

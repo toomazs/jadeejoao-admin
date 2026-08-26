@@ -60,3 +60,25 @@ export function shortDate(iso: string | undefined): string {
     ? '—'
     : date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
+
+/**
+ * The roles the couple actually hands out.
+ *
+ * Read once from their spreadsheet and kept here because the column is free
+ * text: typing it every time is how "Madrinha" and "madrinha" become two
+ * different roles and the ceremony card grows a duplicate. Anything else they
+ * want still goes in — the list is a shortcut, not a rule.
+ */
+export const CEREMONY_ROLES = [
+  'Noiva',
+  'Noivo',
+  'Mãe da noiva',
+  'Pai da noiva',
+  'Mãe do noivo',
+  'Pai do noivo',
+  'Madrinha',
+  'Padrinho',
+  'Dama de honra',
+  'Pajem',
+  'Celebrante',
+] as const

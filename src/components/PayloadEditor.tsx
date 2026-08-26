@@ -13,6 +13,7 @@ import {
   FIELD_ONLY_IF,
   FIELD_PT,
   LIST_ITEM_ANCHOR,
+  SECTION_ANCHOR,
   SECTION_GROUPS,
 } from "../lib/labels-fields";
 
@@ -263,7 +264,9 @@ export function PayloadEditor({
                 const anchor =
                   inside
                     .map((k) => FIELD_ANCHOR[`${anchorPath(path)}.${k}`])
-                    .find(Boolean) ?? anchorPath(path)
+                    .find(Boolean) ??
+                  SECTION_ANCHOR[anchorPath(path)] ??
+                  anchorPath(path)
                 focusPreview?.(anchor)
               }}
             >

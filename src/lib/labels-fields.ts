@@ -169,6 +169,18 @@ export const FIELD_ANCHOR: Record<string, string> = {
 }
 
 /**
+ * Where the preview should land when a whole section is asked for.
+ *
+ * The tab's answer is normally the section's own anchor, which is its top. For
+ * Nossa história the top is a dark ground with nothing on it yet: the chapter
+ * is pinned for almost five screens and the bride only fades in a fifth of the
+ * way down. Opening the tab showed a grey rectangle.
+ */
+export const SECTION_ANCHOR: Record<string, string> = {
+  our_story: 'chapter-bride',
+}
+
+/**
  * Lists whose entries are addressable one by one, and the id prefix the site
  * gives them.
  *

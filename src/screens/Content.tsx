@@ -16,7 +16,7 @@ import type { Gift } from "../components/GiftList";
 import { SitePreview } from "../components/SitePreview";
 import type { Draft } from "../components/SitePreview";
 import { Notice, SaveBar, shakeSaveBar, Tabs, Toggle } from "../components/ui";
-import { SECTION_PT } from "../lib/labels-fields";
+import { SECTION_ANCHOR, SECTION_PT } from "../lib/labels-fields";
 import { hasPendingImages, uploadPendingImages } from "../lib/uploads";
 
 type Section = Record<string, unknown> & { slug: string; enabled?: boolean };
@@ -414,7 +414,7 @@ export function Content() {
 
               <SitePreview
                 draft={previewDraft}
-                focusSlug={slug}
+                focusSlug={SECTION_ANCHOR[slug] ?? slug}
                 focusAnchor={anchor?.id}
                 focusNonce={anchor?.n}
                 picking={picking ?? undefined}

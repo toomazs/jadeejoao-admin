@@ -43,10 +43,14 @@ export function Accordion({
           aria-expanded={open}
           aria-controls={bodyId}
           onClick={() => {
-            setOpen((o) => {
-              if (!o) onOpen?.()
-              return !o
-            })
+            const next = !open
+            setOpen(next)
+            // Outside the updater on purpose. React runs updaters during
+            // render — twice under StrictMode — so calling back from inside
+            // one told the panel to move its preview mid-render: React warned,
+            // fired it twice, and the anchor it set was not reliably the one
+            // that stuck.
+            if (next) onOpen?.()
           }}
           className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
         >

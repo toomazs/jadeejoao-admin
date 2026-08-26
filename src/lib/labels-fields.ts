@@ -17,7 +17,6 @@
 export const FIELD_HINT: Record<string, string> = {
   event_date: 'Aparece no topo, no Grande Dia e no rodapé.',
   hero_image_url: 'A foto grande de abertura, atrás do logo.',
-  date: 'A linha pequena embaixo do rótulo, na foto. Texto livre.',
   eye_x: 'Posição do olho da Catarina na foto, de onde saem as estrelinhas.',
   eye_y: 'Posição do olho da Catarina na foto, de onde saem as estrelinhas.',
 }

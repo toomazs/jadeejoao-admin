@@ -49,6 +49,15 @@ interface EditorProps {
    */
   onSave?: () => void;
   saving?: boolean;
+  /**
+   * The keys an entry of this list can hold, in payload order, and which of
+   * them are optional. Borrowed from the sibling entries — the only
+   * description of the shape the panel has — so a field the couple has not
+   * filled in still appears where it belongs, instead of only existing as a
+   * button in a pile at the bottom.
+   */
+  shape?: string[];
+  optional?: ReadonlySet<string>;
 }
 
 /** Keys whose value is prose rather than a phrase. */
@@ -116,6 +125,8 @@ export function PayloadEditor({
   path = "",
   onSave,
   saving,
+  shape,
+  optional,
 }: EditorProps) {
   // Any accordion in here can ask the preview to show what it opened.
   const focusPreview = use(FocusContext);
@@ -260,10 +271,31 @@ export function PayloadEditor({
     );
   }
 
+  // Walk the shape, not just what is here: a key the entry lacks has to keep
+  // its place in the column, or "adicionar subtítulo" ends up at the bottom,
+  // nowhere near the line it would create.
+  const ordered =
+    shape && shape.length > 0 ? shape : entries.map(([key]) => key);
+
   return (
     <div className="grid gap-3">
-      {entries.map(([key, child]) => {
+      {ordered.map((key) => {
+        if (!(key in value)) {
+          return (
+            <AbsentField
+              key={key}
+              label={humanize(key)}
+              onAdd={() => onChange({ ...value, [key]: "" })}
+            />
+          );
+        }
+        const child = value[key];
         const childPath = path ? `${path}.${key}` : key;
+        // Removable when a sibling gets by without it, or when it is sitting
+        // there empty — which is what an accidental "adicionar" leaves behind,
+        // and what the couple had no way to undo.
+        const removable =
+          Boolean(optional?.has(key)) || child === "";
         const editor = (
           <PayloadEditor
             value={child}
@@ -312,8 +344,24 @@ export function PayloadEditor({
         return (
           <div key={key}>
             {Array.isArray(child) ? null : (
-              <span className="block font-body text-xs tracking-[0.1em] text-dark-gray uppercase">
-                {humanize(key)}
+              <span className="flex items-center gap-1.5">
+                <span className="font-body text-xs tracking-[0.1em] text-dark-gray uppercase">
+                  {humanize(key)}
+                </span>
+                {removable ? (
+                  <button
+                    type="button"
+                    aria-label={`Tirar ${humanize(key)}`}
+                    title={`Tirar ${humanize(key)}`}
+                    onClick={() => {
+                      const { [key]: _removed, ...rest } = value;
+                      onChange(rest);
+                    }}
+                    className="cursor-pointer p-0.5 text-dark-gray/50 transition-colors hover:text-terracotta"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                ) : null}
               </span>
             )}
             {/* Some field names promise more than they deliver — the hint says
@@ -328,6 +376,31 @@ export function PayloadEditor({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * A field the entry does not have yet, holding its own place in the column.
+ *
+ * The couple reads down a form; a row of "adicionar" buttons under everything
+ * else says nothing about where the thing would land. This sits exactly where
+ * the line will appear.
+ */
+function AbsentField({ label, onAdd }: { label: string; onAdd: () => void }) {
+  return (
+    <div>
+      <span className="block font-body text-xs tracking-[0.1em] text-dark-gray/60 uppercase">
+        {label}
+      </span>
+      <button
+        type="button"
+        onClick={onAdd}
+        className="mt-1 flex min-h-9 w-full cursor-pointer items-center gap-1.5 border border-dashed border-olive-line px-3 font-body text-sm text-dark-gray/70 transition-colors hover:border-olive hover:text-olive"
+      >
+        <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+        adicionar
+      </button>
     </div>
   );
 }
@@ -370,6 +443,29 @@ function ArrayEditor({
 }) {
   const focusPreview = use(FocusContext);
 
+  const isEntry = (v: Json): v is Record<string, Json> =>
+    Boolean(v) && typeof v === "object" && !Array.isArray(v);
+
+  // The shape of an entry, in payload order, read off the siblings. A key some
+  // sibling gets by without is an optional one, and may be taken back out.
+  const shape: string[] = [];
+  for (const item of items) {
+    if (!isEntry(item)) continue;
+    for (const key of Object.keys(item)) {
+      if (!shape.includes(key)) shape.push(key);
+    }
+  }
+  const optional = new Set(
+    shape.filter((key) => items.some((item) => isEntry(item) && !(key in item))),
+  );
+
+  const listKey = path.split(".").pop() ?? "";
+  // Only the album has a frame per entry. Every other list is one block on the
+  // page, so its entries all point at the block — without this, opening the
+  // first item of the programme scrolled the site to the first album photo.
+  const anchorAt = (index: number) =>
+    listKey === "moments" ? `moment-${index}` : FIELD_ANCHOR[listKey];
+
   const blankLike = (sample: Json | undefined): Json => {
     if (sample === undefined) return "";
     if (Array.isArray(sample)) return [];
@@ -394,25 +490,6 @@ function ArrayEditor({
         : "";
   };
 
-  /**
-   * Fields other entries have and this one does not.
-   *
-   * Optional keys are simply absent from the payload when empty, so the album
-   * moment with no date has no date field at all — and no way to grow one. The
-   * shape is borrowed from the siblings, which is the only description of it
-   * the panel has.
-   */
-  const missingKeys = (item: Json): string[] => {
-    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
-    const known = new Set<string>();
-    for (const other of items) {
-      if (other && typeof other === "object" && !Array.isArray(other)) {
-        Object.keys(other).forEach((k) => known.add(k));
-      }
-    }
-    return [...known].filter((k) => !(k in item));
-  };
-
   const title = (item: Json, index: number): string => {
     if (item && typeof item === "object" && !Array.isArray(item)) {
       for (const key of ["title", "label", "name", "time", "date"]) {
@@ -431,7 +508,10 @@ function ArrayEditor({
           title={title(item, index)}
           // Each frame is addressable, so opening the sixth moment shows the
           // sixth moment rather than the top of the album.
-          onOpen={() => focusPreview?.(`moment-${index}`)}
+          onOpen={() => {
+            const anchor = anchorAt(index);
+            if (anchor) focusPreview?.(anchor);
+          }}
           right={
             <button
               type="button"
@@ -447,35 +527,12 @@ function ArrayEditor({
           <PayloadEditor
             value={item}
             path={path}
+            shape={shape}
+            optional={optional}
             onChange={(next) =>
               onChange(items.map((old, i) => (i === index ? next : old)))
             }
           />
-
-          {missingKeys(item).length > 0 ? (
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="font-body text-xs text-dark-gray">
-                adicionar:
-              </span>
-              {missingKeys(item).map((key) => (
-                <Button
-                  key={key}
-                  tone="quiet"
-                  onClick={() =>
-                    onChange(
-                      items.map((old, i) =>
-                        i === index && old && typeof old === "object"
-                          ? { ...(old as Record<string, Json>), [key]: "" }
-                          : old,
-                      ),
-                    )
-                  }
-                >
-                  {humanize(key)}
-                </Button>
-              ))}
-            </div>
-          ) : null}
 
           <SaveRow onSave={onSave} saving={saving} />
         </Accordion>

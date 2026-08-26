@@ -60,6 +60,17 @@ interface EditorProps {
   optional?: ReadonlySet<string>;
 }
 
+/**
+ * A payload path with the grouping markers taken back out.
+ *
+ * A group of several keys hands its children a path like
+ * `our_story::Momentos do álbum.moments`, because the child must not look the
+ * section's groups up again and recurse. That marker is a panel detail, and the
+ * anchor map speaks payload paths — so the album's list stopped matching
+ * `our_story.moments` and opening a frame moved nothing at all.
+ */
+const anchorPath = (path: string): string => path.replace(/::[^.]*/g, "");
+
 /** Keys whose value is prose rather than a phrase. */
 const LONG_TEXT = /body|bio|letter|notes|description|attire|parking/i;
 /** Keys holding a photograph the couple should be able to replace and crop. */
@@ -155,7 +166,7 @@ export function PayloadEditor({
     // accordion's anchor cannot also be the bio's — clicking into the bio has
     // to move the preview again, further down, or she is editing text that is
     // not on screen.
-    const fieldAnchor = FIELD_ANCHOR[path];
+    const fieldAnchor = FIELD_ANCHOR[anchorPath(path)];
     return (
       <TextInput
         keyName={key}
@@ -230,8 +241,9 @@ export function PayloadEditor({
                 // screen, instead of the ones without a mapped field leaving
                 // the preview wherever it last happened to be.
                 const anchor =
-                  inside.map((k) => FIELD_ANCHOR[`${path}.${k}`]).find(Boolean) ??
-                  path
+                  inside
+                    .map((k) => FIELD_ANCHOR[`${anchorPath(path)}.${k}`])
+                    .find(Boolean) ?? anchorPath(path)
                 focusPreview?.(anchor)
               }}
             >
@@ -469,8 +481,11 @@ function ArrayEditor({
   // Only the album has a frame per entry. Every other list is one block on the
   // page, so its entries all point at the block — without this, opening the
   // first item of the programme scrolled the site to the first album photo.
+  const listPath = anchorPath(path);
   const anchorAt = (index: number) =>
-    path === "our_story.moments" ? `moment-${index}` : FIELD_ANCHOR[path];
+    listPath === "our_story.moments"
+      ? `moment-${index}`
+      : FIELD_ANCHOR[listPath];
 
   const blankLike = (sample: Json | undefined): Json => {
     if (sample === undefined) return "";

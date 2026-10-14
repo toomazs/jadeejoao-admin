@@ -36,8 +36,11 @@ export function Accordion({
   const bodyId = useId()
 
   return (
-    <div className="border border-olive-line bg-veil">
-      <div className="flex items-center gap-2 px-3">
+    // min-w-0 because this sits in a grid, and a grid item is allowed to be as
+    // wide as its content unless told otherwise. A moment whose name is a whole
+    // sentence made the row grow past the panel instead of the name giving way.
+    <div className="min-w-0 border border-olive-line bg-veil">
+      <div className="flex min-w-0 items-center gap-2 px-3">
         <button
           type="button"
           aria-expanded={open}
@@ -52,7 +55,11 @@ export function Accordion({
             // that stuck.
             if (next) onOpen?.()
           }}
-          className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
+          // w-0 with flex-1, not min-w-0 alone: a flex item sized from its
+          // content keeps the content's width as its floor, and the long names
+          // in the album are one long word short of nothing to give. Starting
+          // from zero and growing into what is left can only ever fit.
+          className="flex min-h-11 w-0 flex-1 cursor-pointer items-center gap-2 py-2 text-left"
         >
           <ChevronDown
             className={`h-4 w-4 shrink-0 text-dark-gray transition-transform duration-200 ${
@@ -60,8 +67,12 @@ export function Accordion({
             }`}
             aria-hidden="true"
           />
-          <span className="min-w-0">
-            <span className="block truncate font-body text-sm text-ink">{title}</span>
+          <span className="w-0 flex-1">
+            {/* Two lines, then an ellipsis. These are names the couple wrote as
+                sentences — "Começo do namoro. Foto da tia Taninha, que era…" —
+                and one clipped line of a sentence tells them nothing about
+                which moment the row is. */}
+            <span className="line-clamp-2 font-body text-sm text-ink">{title}</span>
             {subtitle ? (
               <span className="block truncate font-body text-xs text-dark-gray">{subtitle}</span>
             ) : null}

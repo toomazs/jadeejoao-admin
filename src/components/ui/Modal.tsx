@@ -39,6 +39,8 @@ export function Modal({
   width?: string
 }) {
   const ref = useRef<HTMLDialogElement>(null)
+  /** Whether the press that is ending began on the backdrop. */
+  const startedOutside = useRef(false)
   const [closing, setClosing] = useState(false)
   /**
    * Whether the arrival has finished.
@@ -105,8 +107,15 @@ export function Modal({
         event.preventDefault()
         leave()
       }}
+      // Only when the press *began* on the backdrop too. A click fires on the
+      // nearest ancestor of where the button went down and where it came up, so
+      // selecting text inside and releasing past the edge fires one on the
+      // dialog itself — indistinguishable from a click on the backdrop.
+      onPointerDown={(event) => {
+        startedOutside.current = event.target === ref.current
+      }}
       onClick={(event) => {
-        if (event.target === ref.current) leave()
+        if (event.target === ref.current && startedOutside.current) leave()
       }}
       onAnimationEnd={(event) => {
         if (event.animationName === 'modal-in') setArrived(true)

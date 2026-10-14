@@ -130,9 +130,6 @@ function MonthGrid({
 
 /* ------------------------------------------------------------------ date */
 
-/** What the month grid needs, so it can open upwards when it has to. */
-const CALENDAR_H = 310
-
 export function DateField({
   label,
   value,
@@ -146,8 +143,7 @@ export function DateField({
 }) {
   const [open, setOpen] = useState(false)
   const wrapper = useRef<HTMLDivElement>(null)
-  const panel = useRef<HTMLDivElement>(null)
-  const spot = useAnchoredSpot(open, wrapper, CALENDAR_H)
+  const { spot, panel, setPanel } = useAnchoredSpot(open, wrapper)
 
   useEffect(() => {
     if (!open) return
@@ -156,7 +152,7 @@ export function DateField({
       // The panel is no longer inside the wrapper, so it has to be asked
       // separately — otherwise mousedown on a day closed the calendar before
       // the click that picks it ever landed.
-      if (wrapper.current?.contains(target) || panel.current?.contains(target)) return
+      if (wrapper.current?.contains(target) || panel?.contains(target)) return
       setOpen(false)
     }
     const onKey = (event: KeyboardEvent) => {
@@ -168,7 +164,7 @@ export function DateField({
       document.removeEventListener('mousedown', onDocClick)
       window.removeEventListener('keydown', onKey)
     }
-  }, [open])
+  }, [open, panel])
 
   return (
     <div ref={wrapper} className={`relative ${className}`}>
@@ -191,7 +187,7 @@ export function DateField({
       {open && spot
         ? createPortal(
             <div
-              ref={panel}
+              ref={setPanel}
               style={{ top: spot.top, left: spot.left }}
               className="fixed z-50 shadow-[0_18px_40px_-24px_rgba(26,24,24,0.6)]"
             >
@@ -218,9 +214,6 @@ export function DateField({
  * Minutes go in fives — nothing in a wedding day starts at 15:37, and a full
  * list of sixty would be a scroll for no reason.
  */
-/** The two columns are max-h-56, plus the border. */
-const CLOCK_H = 228
-
 export function TimeField({
   label,
   value,
@@ -234,15 +227,14 @@ export function TimeField({
 }) {
   const [open, setOpen] = useState(false)
   const wrapper = useRef<HTMLDivElement>(null)
-  const panel = useRef<HTMLDivElement>(null)
   const [hh = '', mm = ''] = value.split(':')
-  const spot = useAnchoredSpot(open, wrapper, CLOCK_H)
+  const { spot, panel, setPanel } = useAnchoredSpot(open, wrapper)
 
   useEffect(() => {
     if (!open) return
     const onDocClick = (event: MouseEvent) => {
       const target = event.target as Node
-      if (wrapper.current?.contains(target) || panel.current?.contains(target)) return
+      if (wrapper.current?.contains(target) || panel?.contains(target)) return
       setOpen(false)
     }
     const onKey = (event: KeyboardEvent) => {
@@ -254,7 +246,7 @@ export function TimeField({
       document.removeEventListener('mousedown', onDocClick)
       window.removeEventListener('keydown', onKey)
     }
-  }, [open])
+  }, [open, panel])
 
   const set = (h: string, m: string) => onChange(`${h}:${m}`)
 
@@ -279,7 +271,7 @@ export function TimeField({
       {open && spot
         ? createPortal(
             <div
-              ref={panel}
+              ref={setPanel}
               style={{ top: spot.top, left: spot.left }}
               className="fixed z-50 flex border border-olive-line bg-cream shadow-[0_18px_40px_-24px_rgba(26,24,24,0.6)]"
             >

@@ -101,7 +101,16 @@ export const SECTION_GROUPS: Record<string, FieldGroup[]> = {
     { title: 'O anúncio da Catarina', keys: ['announcement'] },
   ],
   hero: [
-    { title: 'Abertura', keys: ['event_date', 'city_label', 'hero_image_url'], open: true },
+    // focus_x and focus_y never render as fields of their own — the editor
+    // skips them, and the framing is set by dragging the photograph. They are
+    // listed here because a group is handed a *copy* of the payload holding
+    // only its own keys: left out, the dragger could write the framing (the
+    // preview moved) and never read it back (the window stayed in the middle).
+    {
+      title: 'Abertura',
+      keys: ['event_date', 'city_label', 'hero_image_url', 'focus_x', 'focus_y'],
+      open: true,
+    },
   ],
   big_day: [
     { title: 'Textos', keys: ['title', 'body', 'venue_notes'], open: true },

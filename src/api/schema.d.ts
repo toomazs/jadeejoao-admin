@@ -328,12 +328,32 @@ export interface paths {
         };
         /**
          * List guestbook messages
-         * @description Every message, newest first. There is nothing to filter by: the guestbook is write-only in public (AD-14), so a message is never shown to anyone but them.
+         * @description Every message, newest first — including the ones beyond what the wall on the site shows. There is nothing to filter by: a message is either there or deleted.
          */
         get: operations["admin-list-messages"];
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/messages/{message_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a guestbook message
+         * @description Removes a message for good — from the wall on the site and from this list. The couple's only control over a guestbook that publishes as it is written, so it is immediate and there is no undo.
+         */
+        delete: operations["admin-delete-message"];
         options?: never;
         head?: never;
         patch?: never;
@@ -626,7 +646,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Read the guestbook wall
+         * @description The most recent messages guests have left, newest first, for the wall on the site.
+         */
+        get: operations["list-messages"];
         put?: never;
         /**
          * Leave a message for the couple
@@ -1313,6 +1337,16 @@ export interface components {
              */
             event_date: string;
             /**
+             * Format: double
+             * @description Ponto da foto que deve permanecer visível, em porcentagem da largura.
+             */
+            focus_x?: number;
+            /**
+             * Format: double
+             * @description Ponto da foto que deve permanecer visível, em porcentagem da altura.
+             */
+            focus_y?: number;
+            /**
              * Format: uri
              * @description The full-bleed photograph behind the wordmark.
              */
@@ -1445,6 +1479,15 @@ export interface components {
             group_id?: string;
             /** Format: uuid */
             message_id: string;
+        };
+        MessageWallOutputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example https://example.com/schemas/MessageWallOutputBody.json
+             */
+            readonly $schema?: string;
+            messages: components["schemas"]["PublicMessage"][] | null;
         };
         MessagesIntroPayload: {
             /** @description Rich text as Markdown. */
@@ -1595,6 +1638,14 @@ export interface components {
              * @example 15:00
              */
             time: string;
+        };
+        PublicMessage: {
+            author_name: string;
+            body: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            message_id: string;
         };
         RSVPAnswer: {
             /** @enum {string} */
@@ -2439,6 +2490,35 @@ export interface operations {
             };
         };
     };
+    "admin-delete-message": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "change-admin-password": {
         parameters: {
             query?: never;
@@ -2883,6 +2963,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FeedOutputBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageWallOutputBody"];
                 };
             };
             /** @description Error */

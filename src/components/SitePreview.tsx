@@ -21,7 +21,7 @@ const DEVICES = {
   phone: { label: 'Celular', width: '390px', icon: Smartphone },
 } as const
 
-type Device = keyof typeof DEVICES
+export type Device = keyof typeof DEVICES
 
 export interface Draft {
   /** The public `/content` shape — sections already filtered by `enabled`. */
@@ -46,6 +46,13 @@ interface SitePreviewProps {
    */
   picking?: string
   onPicked?: (x: number, y: number) => void
+  /**
+   * Which shape the preview is wearing, owned by the screen so that a field
+   * meant for one of them can ask to be shown in it. The focal point is for
+   * phones; touching it with the preview on a desktop shows nothing.
+   */
+  device: Device
+  onDevice: (next: Device) => void
   className?: string
 }
 
@@ -56,10 +63,11 @@ export function SitePreview({
   focusNonce,
   picking,
   onPicked,
+  device,
+  onDevice,
   className = '',
 }: SitePreviewProps) {
   const frame = useRef<HTMLIFrameElement>(null)
-  const [device, setDevice] = useState<Device>('desktop')
   const [ready, setReady] = useState(false)
   const [nonce, setNonce] = useState(0)
 
@@ -113,7 +121,7 @@ export function SitePreview({
                 title={label}
                 aria-label={label}
                 aria-pressed={device === key}
-                onClick={() => setDevice(key)}
+                onClick={() => onDevice(key)}
                 className={`cursor-pointer border p-1.5 transition-colors ${
                   device === key
                     ? 'border-olive bg-olive text-cream'

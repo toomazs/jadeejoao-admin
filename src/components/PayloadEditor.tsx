@@ -4,6 +4,7 @@ import { ChapterPhotosSlot } from "./ChapterPhotos";
 import { IconField } from "./IconField";
 import { GiftListSlot } from "./GiftList";
 import { DateTimeField, ImageField } from "./fields";
+import { FocusPicker } from "./FocusPicker";
 import { createContext, use, useRef, useState } from "react";
 
 import { MarkdownField } from "./MarkdownField";
@@ -39,6 +40,17 @@ type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
  */
 /** Lets any accordion move the preview to whatever it just opened. */
 export const FocusContext = createContext<((anchor: string) => void) | null>(null)
+
+/**
+ * Lets a field ask the preview to wear a particular shape.
+ *
+ * The focal point is the reason this exists: it decides what survives on a
+ * phone, so reaching for it while the preview is a desktop shows nothing
+ * happening at all.
+ */
+export const DeviceContext = createContext<((device: "desktop" | "phone") => void) | null>(
+  null,
+);
 
 export const PickContext = createContext<{
   picking: string | null;
@@ -329,6 +341,11 @@ export function PayloadEditor({
         const gate = FIELD_ONLY_IF[`${anchorPath(path)}.${key}`];
         if (gate && !value[gate]) return null;
 
+        // The focal point is two percentages, and "73% horizontal" is not
+        // something anybody can picture. It is set by dragging the photo
+        // below, so the raw numbers never appear as boxes to type into.
+        if (key === "focus_x" || key === "focus_y") return null;
+
         const blank = blanks?.[key] ?? "";
         if (!(key in value)) {
           // A checkbox has nothing to add: not ticked IS an answer, and asking
@@ -421,6 +438,19 @@ export function PayloadEditor({
               </span>
             )}
             {editor}
+            {/* The focal point rides with the photograph it belongs to: a point
+                on a picture, set on the picture, rather than two percentages in
+                boxes somewhere below it. */}
+            {/* Not gated on the field being present: the API omits a focal
+                point that is still zero, so waiting for it to exist would mean
+                it could never be set in the first place. */}
+            {key === "hero_image_url" && typeof child === "string" && child ? (
+              <FocusPicker
+                src={child}
+                x={typeof value.focus_x === "number" ? value.focus_x : 50}
+                onChange={(x) => onChange({ ...value, focus_x: x })}
+              />
+            ) : null}
           </div>
         );
       })}

@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router";
 
 import { $api, problemDetail } from "../api/client";
 import {
+  DeviceContext,
   FocusContext,
   PayloadEditor,
   PickContext,
@@ -15,7 +16,7 @@ import type { ChapterPhoto } from "../components/ChapterPhotos";
 import { GiftList, GiftsContext, giftBody, isNew } from "../components/GiftList";
 import type { Gift } from "../components/GiftList";
 import { SitePreview } from "../components/SitePreview";
-import type { Draft } from "../components/SitePreview";
+import type { Device, Draft } from "../components/SitePreview";
 import { Notice, SaveBar, shakeSaveBar, Tabs, Toggle } from "../components/ui";
 import { SECTION_ANCHOR, SECTION_PT } from "../lib/labels-fields";
 import { hasPendingImages, uploadPendingImages } from "../lib/uploads";
@@ -137,6 +138,13 @@ export function Content() {
   useEffect(() => {
     localStorage.setItem(PANE_KEY, String(paneWidth));
   }, [paneWidth]);
+
+  /**
+   * Which shape the preview wears. It lives here rather than inside the preview
+   * because a field can need it: the focal point decides what survives on a
+   * phone, and touching it while the preview is a desktop shows nothing at all.
+   */
+  const [device, setDevice] = useState<Device>("desktop");
 
   const [picking, setPicking] = useState<string | null>(null);
   const pickHandler = useRef<((x: number, y: number) => void) | null>(null);
@@ -466,6 +474,7 @@ export function Content() {
         }
       >
         <FocusContext value={focusOn}>
+          <DeviceContext value={setDevice}>
           <PickContext
             value={{
               picking,
@@ -520,6 +529,8 @@ export function Content() {
               />
 
               <SitePreview
+                device={device}
+                onDevice={setDevice}
                 draft={previewDraft}
                 focusSlug={SECTION_ANCHOR[slug] ?? slug}
                 focusAnchor={anchor?.id}
@@ -533,6 +544,7 @@ export function Content() {
               />
             </div>
           </PickContext>
+          </DeviceContext>
         </FocusContext>
       </GalleryContext>
       </GiftsContext>

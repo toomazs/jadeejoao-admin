@@ -1,5 +1,8 @@
 import { Calendar, ChevronLeft, ChevronRight, Clock } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+
+import { portalHost, useAnchoredSpot } from './portalHost'
 
 /**
  * A calendar and a clock, drawn here rather than borrowed from the browser.
@@ -127,6 +130,9 @@ function MonthGrid({
 
 /* ------------------------------------------------------------------ date */
 
+/** What the month grid needs, so it can open upwards when it has to. */
+const CALENDAR_H = 310
+
 export function DateField({
   label,
   value,
@@ -140,11 +146,18 @@ export function DateField({
 }) {
   const [open, setOpen] = useState(false)
   const wrapper = useRef<HTMLDivElement>(null)
+  const panel = useRef<HTMLDivElement>(null)
+  const spot = useAnchoredSpot(open, wrapper, CALENDAR_H)
 
   useEffect(() => {
     if (!open) return
     const onDocClick = (event: MouseEvent) => {
-      if (!wrapper.current?.contains(event.target as Node)) setOpen(false)
+      const target = event.target as Node
+      // The panel is no longer inside the wrapper, so it has to be asked
+      // separately — otherwise mousedown on a day closed the calendar before
+      // the click that picks it ever landed.
+      if (wrapper.current?.contains(target) || panel.current?.contains(target)) return
+      setOpen(false)
     }
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false)
@@ -175,17 +188,24 @@ export function DateField({
         {value ? formatLongDate(value) : 'escolher a data'}
       </button>
 
-      {open ? (
-        <div className="absolute left-0 z-20 mt-1 shadow-[0_18px_40px_-24px_rgba(26,24,24,0.6)]">
-          <MonthGrid
-            value={value}
-            onPick={(next) => {
-              onChange(next)
-              setOpen(false)
-            }}
-          />
-        </div>
-      ) : null}
+      {open && spot
+        ? createPortal(
+            <div
+              ref={panel}
+              style={{ top: spot.top, left: spot.left }}
+              className="fixed z-50 shadow-[0_18px_40px_-24px_rgba(26,24,24,0.6)]"
+            >
+              <MonthGrid
+                value={value}
+                onPick={(next) => {
+                  onChange(next)
+                  setOpen(false)
+                }}
+              />
+            </div>,
+            portalHost(wrapper.current),
+          )
+        : null}
     </div>
   )
 }
@@ -198,6 +218,9 @@ export function DateField({
  * Minutes go in fives — nothing in a wedding day starts at 15:37, and a full
  * list of sixty would be a scroll for no reason.
  */
+/** The two columns are max-h-56, plus the border. */
+const CLOCK_H = 228
+
 export function TimeField({
   label,
   value,
@@ -211,15 +234,26 @@ export function TimeField({
 }) {
   const [open, setOpen] = useState(false)
   const wrapper = useRef<HTMLDivElement>(null)
+  const panel = useRef<HTMLDivElement>(null)
   const [hh = '', mm = ''] = value.split(':')
+  const spot = useAnchoredSpot(open, wrapper, CLOCK_H)
 
   useEffect(() => {
     if (!open) return
     const onDocClick = (event: MouseEvent) => {
-      if (!wrapper.current?.contains(event.target as Node)) setOpen(false)
+      const target = event.target as Node
+      if (wrapper.current?.contains(target) || panel.current?.contains(target)) return
+      setOpen(false)
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
     }
     document.addEventListener('mousedown', onDocClick)
-    return () => document.removeEventListener('mousedown', onDocClick)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDocClick)
+      window.removeEventListener('keydown', onKey)
+    }
   }, [open])
 
   const set = (h: string, m: string) => onChange(`${h}:${m}`)
@@ -242,8 +276,13 @@ export function TimeField({
         {value || 'escolher a hora'}
       </button>
 
-      {open ? (
-        <div className="absolute left-0 z-20 mt-1 flex border border-olive-line bg-cream shadow-[0_18px_40px_-24px_rgba(26,24,24,0.6)]">
+      {open && spot
+        ? createPortal(
+            <div
+              ref={panel}
+              style={{ top: spot.top, left: spot.left }}
+              className="fixed z-50 flex border border-olive-line bg-cream shadow-[0_18px_40px_-24px_rgba(26,24,24,0.6)]"
+            >
           <ul className="max-h-56 w-16 overflow-y-auto border-r border-sand-line">
             {Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0')).map((h) => (
               <li key={h}>
@@ -276,9 +315,11 @@ export function TimeField({
                 </button>
               </li>
             ))}
-          </ul>
-        </div>
-      ) : null}
+              </ul>
+            </div>,
+            portalHost(wrapper.current),
+          )
+        : null}
     </div>
   )
 }

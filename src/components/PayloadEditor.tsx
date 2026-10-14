@@ -4,7 +4,7 @@ import { ChapterPhotosSlot } from "./ChapterPhotos";
 import { IconField } from "./IconField";
 import { GiftListSlot } from "./GiftList";
 import { DateTimeField, ImageField } from "./fields";
-import { createContext, use } from "react";
+import { createContext, use, useRef, useState } from "react";
 
 import { MarkdownField } from "./MarkdownField";
 import { Accordion, Button, Checkbox, DateField } from "./ui";
@@ -497,6 +497,36 @@ function ArrayEditor({
 }) {
   const focusPreview = use(FocusContext);
 
+  /**
+   * A lasting identity per row, so React can tell the rows apart.
+   *
+   * Keyed by index, removing the third moment did not remove a row — it handed
+   * the third row's React state to the fourth moment, which moved up into it.
+   * The accordion stayed open on something else, a half-typed label belonged to
+   * the entry that had just been deleted, and the preview, whose anchors are
+   * index-based too, was pointing at a different moment than the panel showed.
+   */
+  const seq = useRef(0);
+  const [keys, setKeys] = useState<number[]>(() => items.map(() => seq.current++));
+  // The list can also change from outside — switching tabs, discarding a draft.
+  // Then there is no handler to have kept these in step, so they start over.
+  if (keys.length !== items.length) {
+    setKeys(items.map(() => seq.current++));
+  }
+
+  const remove = (index: number) => {
+    setKeys(keys.filter((_, i) => i !== index));
+    onChange(items.filter((_, i) => i !== index));
+    // Send the preview to the nearest frame that will still be there. Left
+    // alone it kept pointing at a position the list no longer has — the album
+    // scrolled to nothing, which is what looked like the preview breaking on a
+    // delete. The neighbour exists both before and after, so this is safe
+    // whether or not the new draft has reached the iframe yet.
+    const survivor = Math.max(0, Math.min(index, items.length - 2));
+    const anchor = anchorAt(survivor);
+    if (anchor) focusPreview?.(anchor);
+  };
+
   const isEntry = (v: Json): v is Record<string, Json> =>
     Boolean(v) && typeof v === "object" && !Array.isArray(v);
 
@@ -580,7 +610,7 @@ function ArrayEditor({
     <div className="mt-1 grid gap-2">
       {items.map((item, index) => (
         <Accordion
-          key={index}
+          key={keys[index] ?? index}
           title={title(item, index)}
           // Each frame is addressable, so opening the sixth moment shows the
           // sixth moment rather than the top of the album.
@@ -592,7 +622,8 @@ function ArrayEditor({
             <button
               type="button"
               aria-label={`Remover ${title(item, index)}`}
-              onClick={() => onChange(items.filter((_, i) => i !== index))}
+              title="Remover"
+              onClick={() => remove(index)}
               className="cursor-pointer p-1 text-dark-gray/60 transition-colors hover:text-terracotta"
             >
               <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -611,12 +642,29 @@ function ArrayEditor({
             }
           />
 
+          {/* Also down here, where the work is. The one in the header is a
+              16-pixel icon at the end of a row that a long name fills, and it
+              scrolls out of sight the moment the entry is open — so removing
+              something meant folding it up again to go and find it. */}
+          <div className="mt-3 flex justify-end border-t border-sand-line pt-3">
+            <button
+              type="button"
+              onClick={() => remove(index)}
+              className="flex cursor-pointer items-center gap-1.5 font-body text-sm text-dark-gray transition-colors hover:text-terracotta"
+            >
+              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+              Remover
+            </button>
+          </div>
         </Accordion>
       ))}
 
       <button
         type="button"
-        onClick={() => onChange([...items, blankLike(items[0])])}
+        onClick={() => {
+          setKeys([...keys, seq.current++]);
+          onChange([...items, blankLike(items[0])]);
+        }}
         className="flex min-h-10 cursor-pointer items-center justify-center gap-2 border border-dashed border-olive-line font-body text-sm text-dark-gray transition-colors hover:border-olive hover:text-olive"
       >
         <Plus className="h-4 w-4" aria-hidden="true" />

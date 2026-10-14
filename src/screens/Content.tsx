@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { useSearchParams } from "react-router";
 
 import { $api, problemDetail } from "../api/client";
@@ -20,6 +21,92 @@ import { SECTION_ANCHOR, SECTION_PT } from "../lib/labels-fields";
 import { hasPendingImages, uploadPendingImages } from "../lib/uploads";
 
 type Section = Record<string, unknown> & { slug: string; enabled?: boolean };
+
+/* ------------------------------------------------------- a largura do painel */
+
+/**
+ * The editor pane used to be a fixed 26rem.
+ *
+ * That is a comfortable width for a title and a date, and far too little for
+ * the album: a dozen moments whose names are whole sentences, each folded
+ * inside two accordions, with a remove button on the far side that the long
+ * ones pushed out of reach. The fix is not a cleverer truncation — it is
+ * letting whoever is editing decide how much room the work needs.
+ */
+const PANE_KEY = "jj-admin:content-pane";
+const PANE_DEFAULT = 416;
+const PANE_MIN = 320;
+
+/** Never so wide that the site it is previewing has no room left. */
+function paneMax(): number {
+  return Math.max(PANE_MIN, Math.min(960, window.innerWidth - 520));
+}
+
+function clampPane(px: number): number {
+  return Math.round(Math.min(Math.max(px, PANE_MIN), paneMax()));
+}
+
+function readPaneWidth(): number {
+  const saved = Number(localStorage.getItem(PANE_KEY));
+  return Number.isFinite(saved) && saved > 0 ? clampPane(saved) : PANE_DEFAULT;
+}
+
+/**
+ * The grip between the two panes.
+ *
+ * Pointer capture rather than listeners on the window: the pointer leaves the
+ * handle on the very first move, and without capture the drag is dropped the
+ * moment it starts. It also answers the arrow keys, because a two-pixel target
+ * is not something everyone can grab.
+ */
+function PaneDivider({
+  width,
+  onMove,
+  onNudge,
+  onReset,
+}: {
+  width: number;
+  onMove: (clientX: number) => void;
+  onNudge: (by: number) => void;
+  onReset: () => void;
+}) {
+  const [dragging, setDragging] = useState(false);
+
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Largura do editor"
+      aria-valuenow={width}
+      tabIndex={0}
+      onPointerDown={(event) => {
+        event.preventDefault();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setDragging(true);
+      }}
+      onPointerMove={(event) => {
+        if (dragging) onMove(event.clientX);
+      }}
+      onPointerUp={(event) => {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+        setDragging(false);
+      }}
+      onDoubleClick={onReset}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowLeft") onNudge(-24);
+        else if (event.key === "ArrowRight") onNudge(24);
+        else if (event.key === "Home") onReset();
+        else return;
+        event.preventDefault();
+      }}
+      title="Arraste para mudar a largura · dois cliques volta ao padrão"
+      className={`hidden w-1.5 cursor-col-resize touch-none self-stretch transition-colors xl:block ${
+        dragging ? "bg-olive" : "bg-sand-line hover:bg-gold-sand"
+      } focus-visible:bg-olive focus-visible:outline-none`}
+    />
+  );
+}
+
 
 /**
  * Editing the words of the site, with the site alongside.
@@ -45,6 +132,12 @@ export function Content() {
   const [uploading, setUploading] = useState(false);
   // Which photo the preview is waiting to be clicked on, and who wants the
   // answer. Kept here because the preview lives here too.
+  const split = useRef<HTMLDivElement>(null);
+  const [paneWidth, setPaneWidth] = useState(readPaneWidth);
+  useEffect(() => {
+    localStorage.setItem(PANE_KEY, String(paneWidth));
+  }, [paneWidth]);
+
   const [picking, setPicking] = useState<string | null>(null);
   const pickHandler = useRef<((x: number, y: number) => void) | null>(null);
   // Which part of the page the preview should be showing. Set when an
@@ -383,7 +476,11 @@ export function Content() {
               cancel: () => setPicking(null),
             }}
           >
-            <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,26rem)_1fr]">
+            <div
+              ref={split}
+              className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[var(--pane)_auto_1fr]"
+              style={{ "--pane": `${paneWidth}px` } as CSSProperties}
+            >
               <div className="min-w-0 overflow-y-auto border border-olive-line bg-cream px-4 py-4">
                 {draft ? (
                   <>
@@ -411,6 +508,16 @@ export function Content() {
                   <p className="font-body text-sm text-dark-gray italic">·</p>
                 )}
               </div>
+
+              <PaneDivider
+                width={paneWidth}
+                onMove={(x) => {
+                  const left = split.current?.getBoundingClientRect().left ?? 0;
+                  setPaneWidth(clampPane(x - left));
+                }}
+                onNudge={(by) => setPaneWidth((w) => clampPane(w + by))}
+                onReset={() => setPaneWidth(PANE_DEFAULT)}
+              />
 
               <SitePreview
                 draft={previewDraft}

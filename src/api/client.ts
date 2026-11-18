@@ -3,6 +3,7 @@ import type { Middleware } from 'openapi-fetch'
 import createQueryClient from 'openapi-react-query'
 
 import { supabase } from '../lib/auth'
+import { validationHint } from '../lib/validation-hint'
 import type { paths } from './schema'
 
 /** Called when the API says the session is over, so the app can react. */
@@ -58,8 +59,18 @@ export function isPasswordObligation(error: unknown): boolean {
   )
 }
 
-/** The PT-BR problem detail the API sends, with a quiet fallback. */
+/**
+ * The PT-BR problem detail the API sends, with a quiet fallback.
+ *
+ * A schema refusal is the exception: Huma writes its own `detail`, in English
+ * and always the same ("validation failed"), and puts the useful part in
+ * `errors[].location`. Showing only the detail made every such refusal look
+ * identical, so a single wrong field anywhere on a long form read as "os dados
+ * estão inválidos" and nothing else.
+ */
 export function problemDetail(error: unknown, fallback = 'Não deu certo agora. Tente de novo.'): string {
+  const hint = validationHint(error)
+  if (hint) return `${fallback}${hint}`
   if (error && typeof error === 'object' && 'detail' in error && typeof error.detail === 'string') {
     return error.detail
   }

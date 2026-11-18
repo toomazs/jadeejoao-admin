@@ -1630,7 +1630,7 @@ export interface components {
              * @description Emblem for a moment that anchors the day; empty renders a plain mark.
              * @enum {string}
              */
-            icon?: "guests" | "ceremony" | "vows" | "rings" | "party" | "music" | "toast" | "cake" | "photo" | "flowers";
+            icon?: "guests" | "checkin" | "arrival" | "welcome" | "ceremony" | "vows" | "rings" | "blessing" | "bouquet" | "flowers" | "children" | "pets" | "photo" | "photos" | "speech" | "toast" | "drinks" | "bar" | "lunch" | "dinner" | "cake" | "dessert" | "coffee" | "party" | "dance" | "music" | "band" | "candles" | "sparklers" | "sunset" | "night" | "gifts" | "car" | "shuttle" | "clock" | "farewell";
             /** @example Recepção dos convidados */
             label: string;
             /**

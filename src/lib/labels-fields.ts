@@ -51,6 +51,18 @@ export const FIELD_PT: Record<string, string> = {
   letter_from_bride: 'Carta da Jade',
   letter_from_groom: 'Carta do João',
   enabled: 'Seção visível no site',
+  focus_x: 'Ponto focal — horizontal (%)',
+  focus_y: 'Ponto focal — vertical (%)',
+  // Names used outside the section editor, so a refusal from the gifts or
+  // messages screen reads as plainly as one from a section.
+  gifts: 'Presentes',
+  kind: 'Tipo de presente',
+  goal_centavos: 'Meta',
+  quota_centavos: 'Valor da cota',
+  max_units: 'Quantas cotas',
+  external_url: 'Link da loja',
+  author_name: 'Quem escreveu',
+  sort: 'Ordem',
 }
 
 /** The sections, in the order the site renders them (AD-8). */

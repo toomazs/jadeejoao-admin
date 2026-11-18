@@ -38,6 +38,17 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
+import type { components } from '../api/schema'
+
+/**
+ * Every emblem the API will accept on a programme moment, straight from the
+ * generated contract. Typing the grid with it means an icon this panel offers
+ * but the API refuses fails `npm run build` — which is how it should have
+ * failed, instead of letting the couple pick Lua and meet "dados inválidos"
+ * with no field named.
+ */
+type ProgrammeIcon = NonNullable<components['schemas']['ProgrammeItem']['icon']>
+
 /**
  * The glyph beside an hour on the programme.
  *
@@ -50,7 +61,7 @@ import type { LucideIcon } from 'lucide-react'
  * the site's BigDay — a key missing there simply draws nothing, which is why
  * choosing is safer than typing.
  */
-const ICONS: { key: string; label: string; Icon: LucideIcon }[] = [
+const ICONS = [
   { key: 'guests', label: 'Convidados', Icon: Users },
   { key: 'checkin', label: 'Recepção', Icon: ClipboardCheck },
   { key: 'arrival', label: 'Chegada', Icon: DoorOpen },
@@ -87,7 +98,17 @@ const ICONS: { key: string; label: string; Icon: LucideIcon }[] = [
   { key: 'shuttle', label: 'Traslado', Icon: Bus },
   { key: 'clock', label: 'Horário', Icon: Clock },
   { key: 'farewell', label: 'Despedida', Icon: Waves },
-]
+] as const satisfies readonly { key: ProgrammeIcon; label: string; Icon: LucideIcon }[]
+
+/**
+ * The other direction: an icon the API accepts with no square in the grid is
+ * one the couple can never choose. `satisfies` above catches a square the API
+ * would refuse; this catches the hole. Both are compile errors, so neither can
+ * ship.
+ */
+type IconsWithNoSquare = Exclude<ProgrammeIcon, (typeof ICONS)[number]['key']>
+type NoneLeftOut<T extends never> = T
+export type _EveryContractIconIsOffered = NoneLeftOut<IconsWithNoSquare>
 
 export function IconField({
   value,

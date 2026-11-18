@@ -262,6 +262,7 @@ function GiftFields({
         <>
           <MoneyField
             label="Meta"
+            hint="Só aqui no painel. O site não mostra meta nem quanto já entrou."
             centavos={gift.goal_centavos}
             onChange={(goal_centavos) => update(at, { goal_centavos })}
           />
